@@ -1,0 +1,61 @@
+services:
+  app-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["./server"]
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+
+  app-1-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["./worker"]
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+
+  app-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["./app2"]
+    ports:
+      - "9090:9090"
+
+  postgres:
+    image: postgres:15
+    env_file:
+      - .env
+    ports:
+      - "5433:5432"
+
+  migrate:
+    image: migrate/migrate:v4.15.2
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    volumes:
+      - ./app-1/migrations:/migrations
+    command:
+      [
+        "-path", "/migrations",
+        "-database", "postgres://${DB_USER}:${DB_PASSWORD}@postgres:${DB_PORT}/${DB_NAME}?sslmode=disable",
+        "up"
+      ]
+
+
+  redis:
+    image: redis:7
+    
+    ports:
+      - "6379:6379"

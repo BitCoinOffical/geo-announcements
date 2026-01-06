@@ -4,15 +4,15 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/BitCoinOffical/geo-announcements/internal/adapters/secondary/postgres"
-	"github.com/BitCoinOffical/geo-announcements/internal/adapters/secondary/redis"
-	"github.com/BitCoinOffical/geo-announcements/internal/domain/rules"
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/cache"
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/handlers"
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/queue"
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/repo"
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/services"
-	"github.com/BitCoinOffical/geo-announcements/internal/middleware"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/adapters/secondary/postgres"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/adapters/secondary/redis"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/domain/rules"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/cache"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/handlers"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/queue"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/repo"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/services"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -21,7 +21,7 @@ import (
 
 func main() {
 	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	db, err := postgres.NewPostgres()

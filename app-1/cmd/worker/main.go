@@ -12,15 +12,15 @@ import (
 	"sync"
 	"time"
 
-	redi "github.com/BitCoinOffical/geo-announcements/internal/adapters/secondary/redis"
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/dto"
+	rdb "github.com/BitCoinOffical/geo-announcements/app-1/internal/adapters/secondary/redis"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 )
 
 func main() {
-	if err := godotenv.Load("../../.env"); err != nil {
-		log.Fatal("no .env file found")
+	if err := godotenv.Load(); err != nil {
+		log.Println(err)
 	}
 	workers, err := strconv.Atoi(os.Getenv("WORKERS"))
 	if err != nil {
@@ -32,7 +32,7 @@ func main() {
 		retry = 5
 		log.Println("error:", err)
 	}
-	rdb := redi.NewWebhookRedis()
+	rdb := rdb.NewWebhookRedis()
 	WebhookWorker(context.Background(), rdb, workers, retry)
 }
 func WebhookWorker(ctx context.Context, rdb *redis.Client, workers int, retry int) {

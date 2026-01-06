@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/dto"
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/repo"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/repo"
 )
 
 type LocationService struct {

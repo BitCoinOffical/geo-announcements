@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/dto"
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/services"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/services"
 	"github.com/gin-gonic/gin"
 )
 

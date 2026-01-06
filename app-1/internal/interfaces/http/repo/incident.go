@@ -6,8 +6,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/dto"
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/models"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/models"
 )
 
 type IncidentRepo struct {

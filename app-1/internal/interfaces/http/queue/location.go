@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/dto"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
 	"github.com/redis/go-redis/v9"
 )
 

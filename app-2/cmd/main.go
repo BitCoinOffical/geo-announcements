@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/BitCoinOffical/geo-announcements/internal/interfaces/http/handlers"
+	"github.com/BitCoinOffical/geo-announcements/app-2/internal/interfaces/http/handlers"
 	"github.com/gin-gonic/gin"
 )
 
