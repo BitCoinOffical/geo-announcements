@@ -93,7 +93,7 @@ func (h *IncidentRepo) GetIncidentByIDRepo(ctx context.Context, id int) (*models
 }
 
 func (h *IncidentRepo) GetIncidentStatRepo(ctx context.Context, fromTime *time.Time) (*models.UsersInDangerousZones, error) {
-	query := `SELECT COUNT(DISTINCT user_id), zone_id FROM locations WHERE create_at >= $1 GROUP BY zone_id`
+	query := `SELECT COUNT(DISTINCT user_id), zone_id FROM user_checks_loс WHERE create_at >= $1 GROUP BY zone_id`
 	row := h.db.QueryRowContext(ctx, query, fromTime)
 	var users models.UsersInDangerousZones
 	err := row.Scan(

@@ -35,7 +35,7 @@ func (h *IncidentService) GetIncidentsService(ctx context.Context, page, limit i
 	if page <= maxPage {
 		all, err := h.cache.GetTop(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cache.GetTop: %w", err)
 		}
 		if len(all) > 0 {
 			start := (page - 1) * limit
@@ -54,11 +54,11 @@ func (h *IncidentService) GetIncidentsService(ctx context.Context, page, limit i
 
 		rows, err := h.incidentRepo.GetTopRepo(ctx, topLimit)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("incidentRepo.GetTopRepo: %w", err)
 		}
 
 		if err := h.cache.SetTop(ctx, rows, time.Minute); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cache.SetTop: %w", err)
 		}
 
 		h.logger.Debug("received from top postgres and save top redis", zap.String("source", "postgres"))

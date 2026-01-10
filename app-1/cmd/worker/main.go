@@ -45,18 +45,18 @@ func (w *WebhookWorker) WebhookWorker(ctx context.Context) {
 			for {
 				result, err := w.rdb.BLPop(ctx, 0, w.Key).Result()
 				if err != nil {
-					log.Println("BLPop>", err)
+					log.Println("BLPop:", err)
 					continue
 				}
 
 				playload := result[1]
-				fmt.Println("playload>>> ", playload)
+				fmt.Println("playload:", playload)
 				var webhook dto.WebHookDTO
 				if err := json.Unmarshal([]byte(playload), &webhook); err != nil {
-					log.Println("Unmarshal>", err)
+					log.Println("Unmarshal: ", err)
 					continue
 				}
-				fmt.Println("webhook>>> ", webhook)
+				fmt.Println("webhook:", webhook)
 
 				if err := sendWebhook(&webhook, playload); err == nil {
 					log.Println("webhook sucess: ok")

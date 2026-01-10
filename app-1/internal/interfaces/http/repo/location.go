@@ -29,7 +29,7 @@ func (h *LocationRepo) CreateLocationRepo(ctx context.Context, dto *dto.Location
 		}
 	}()
 	row, err := tx.ExecContext(ctx, `
-	    INSERT INTO locations (user_id, lat, lon, zone_id)
+	    INSERT INTO user_checks_loс (user_id, lat, lon, zone_id)
 		SELECT $1, $2, $3, z.zone_id
 		FROM zones z
 		WHERE ST_Within(ST_SetSRID(ST_MakePoint($3, $2), 4326), z.wkb_geometry)

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/BitCoinOffical/geo-announcements/app-1/config"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
@@ -15,7 +16,9 @@ import (
 )
 
 const (
-	ClientID = "X-Client-Id"
+	ClientID    = "X-Client-Id"
+	timeOut     = 5
+	maxAttempts = 5
 )
 
 type LocationHandler struct {
@@ -48,8 +51,7 @@ func (h *LocationHandler) CreateLocationHandler(c *gin.Context) {
 		return
 	}
 
-	ctx := context.Background()
-	zones, err := h.service.CreateLocationService(ctx, &dt, userID)
+	zones, err := h.service.CreateLocationService(c.Request.Context(), &dt, userID)
 	if err != nil {
 		h.logger.Error("create location error", zap.Error(err))
 		return
@@ -57,14 +59,29 @@ func (h *LocationHandler) CreateLocationHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "dunger zones": zones})
 
 	go func() {
+		ctx, canel := context.WithTimeout(context.Background(), timeOut*time.Second)
+		defer canel()
 		webhook := dto.WebHookDTO{
 			URL:        h.cfg.WEBHOOK_URL,
 			User_id:    userID,
 			Payload:    dt,
 			RetryCount: 0,
 		}
-		if err := h.queue.EnqueueWebHook(ctx, &webhook, h.cfg.QUEUE_KEY); err != nil {
+		for i := range maxAttempts {
+			if i == maxAttempts {
+				h.logger.Error("exceeded the number of attempts")
+				break
+			}
+			if err := h.queue.EnqueueWebHook(ctx, &webhook, h.cfg.QUEUE_KEY); err == nil {
+				return
+			}
 			h.logger.Error("enqueue webhook error", zap.Error(err))
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Second):
+				continue
+			}
 		}
 	}()
 

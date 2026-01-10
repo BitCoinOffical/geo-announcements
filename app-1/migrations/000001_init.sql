@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS incidents (
 );
 -- +goose StatementEnd
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS locations (
+CREATE TABLE IF NOT EXISTS user_checks_loс (
 	location_id SERIAL PRIMARY KEY,
 	user_id UUID NOT NULL,
 	zone_id NUMERIC(10,0),
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS locations (
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE INDEX idx_incidents_not_deleted ON incidents(deleted_at) WHERE deleted_at IS NULL;
-CREATE INDEX idx_locations_create_at_user_id ON locations(create_at, user_id);
+CREATE INDEX idx_user_checks_loс_create_at_user_id ON user_checks_loс(create_at, user_id);
 
 SET standard_conforming_strings = ON;
 DROP TABLE IF EXISTS "public"."zones" CASCADE;
@@ -195,10 +195,10 @@ CREATE INDEX zones_danger_idx ON zones (is_dangerous);
 -- +goose Down
 -- +goose StatementBegin
 BEGIN;
-DROP INDEX IF EXISTS idx_locations_create_at_user_id;
+DROP INDEX IF EXISTS idx_user_checks_loс_create_at_user_id;
 DROP INDEX IF EXISTS idx_incidents_not_deleted;
 DROP TABLE IF EXISTS "public"."zones" CASCADE;
-DROP TABLE IF EXISTS locations;
+DROP TABLE IF EXISTS user_checks_loс;
 DROP TABLE IF EXISTS incidents;
 DROP TYPE IF EXISTS status_incident;
 COMMIT;
