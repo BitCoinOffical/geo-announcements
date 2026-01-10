@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/BitCoinOffical/geo-announcements/app-1/config"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/adapters/secondary/migration"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/adapters/secondary/postgres"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/adapters/secondary/redis"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/domain/rules"
@@ -16,33 +18,56 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
-	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println(err)
-	}
-
-	db, err := postgres.NewPostgres()
+	cfg, err := config.NewLoadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	rdb := redis.NewRedis()
-	qrd := redis.NewWebhookRedis()
+	var logger *zap.Logger
+	switch cfg.App.DEBUG_LEVEL {
+	case "Dev":
+		logger, err = zap.NewDevelopment()
+		if err != nil {
+			log.Fatal(err)
+		}
+	case "Prod":
+		logger, err = zap.NewProduction()
+		if err != nil {
+			log.Fatal(err)
+		}
+	default:
+		log.Fatal("incorrect debug value")
+	}
 
-	h := handlers.NewIncidentHandler(services.NewIncidentService(repo.NewIncidentRepo(db), cache.NewIncidentCache(rdb)))
-	sh := handlers.NewSystemHandler(db, rdb)
-	loc := handlers.NewLocationHandler(services.NewLocationService(repo.NewLocationRepo(db)), queue.NewWebHookQueue(qrd))
+	db, err := postgres.NewPostgres(&cfg.Postgres)
+	if err != nil {
+		log.Fatal(err)
+	}
+	migrationsDir := "./migrations"
+	migration.RunMigrations(db, migrationsDir)
 
-	r := gin.Default()
+	rdb := redis.NewRedis(&cfg.Redis)
+	qrd := redis.NewWebhookRedis(&cfg.Redis)
+
+	h := handlers.NewIncidentHandler(services.NewIncidentService(repo.NewIncidentRepo(db), cache.NewIncidentCache(rdb), logger), logger, &cfg.App)
+	sh := handlers.NewSystemHandler(db, rdb, logger)
+	loc := handlers.NewLocationHandler(services.NewLocationService(repo.NewLocationRepo(db)), queue.NewWebHookQueue(qrd), logger, &cfg.App)
+
+	r := gin.New()
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation("lat", rules.ValidateLat)
+		if err := v.RegisterValidation("lat", rules.ValidateLat); err != nil {
+			log.Printf("error lat validate: %v", err)
+		}
 	}
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation("lon", rules.ValidateLon)
+		if err := v.RegisterValidation("lon", rules.ValidateLon); err != nil {
+			log.Printf("error lat validate: %v", err)
+		}
 	}
 
 	r.GET("/", func(ctx *gin.Context) {
@@ -51,13 +76,13 @@ func main() {
 
 	rout := r.Group("/api/v1")
 	{
-		rout.GET("/incidents/", middleware.CheckApiKey(), h.GetIncidentsHandler)
-		rout.GET("/incidents", middleware.CheckApiKey(), h.GetIncidentByIDHandler)
-		rout.POST("/incidents", middleware.CheckApiKey(), h.CreateIncidentsHandler)
-		rout.PUT("/incidents", middleware.CheckApiKey(), h.UpdateIncidentsByIDHandler)
-		rout.DELETE("/incidents", middleware.CheckApiKey(), h.DeleteIncidentsByIDHandler)
-		rout.GET("/incidents/stats", middleware.CheckApiKey(), h.GetIncidentStatHandler)
-		rout.GET("/system/health", middleware.CheckApiKey(), sh.GetSystemHealth)
+		rout.GET("/incidents/", middleware.CheckApiKey(&cfg.App), h.GetIncidentsHandler)
+		rout.GET("/incidents", middleware.CheckApiKey(&cfg.App), h.GetIncidentByIDHandler)
+		rout.POST("/incidents", middleware.CheckApiKey(&cfg.App), h.CreateIncidentsHandler)
+		rout.PUT("/incidents", middleware.CheckApiKey(&cfg.App), h.UpdateIncidentsByIDHandler)
+		rout.DELETE("/incidents", middleware.CheckApiKey(&cfg.App), h.DeleteIncidentsByIDHandler)
+		rout.GET("/incidents/stats", middleware.CheckApiKey(&cfg.App), h.GetIncidentStatHandler)
+		rout.GET("/system/health", middleware.CheckApiKey(&cfg.App), sh.GetSystemHealth)
 		rout.POST("/location/check", loc.CreateLocationHandler)
 	}
 

@@ -1,0 +1,113 @@
+version: '3'
+
+vars:
+  BINARY_NAME: budget-backend
+  PROTO_DIR: internal/grpc/handlers/proto
+  PROTO_OUT_DIR: internal/grpc/handlers/gen
+  MIGRATIONS_DIR: migrations
+  DEPS_DIR: "{{.PWD}}/.dev/deps"
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  deps:
+    desc: Install all dependencies in .dev/deps
+    status:
+      - test -d {{.DEPS_DIR}}
+      - test -f {{.DEPS_DIR}}/protoc-gen-go
+      - test -f {{.DEPS_DIR}}/protoc-gen-go-grpc
+      - test -f {{.DEPS_DIR}}/mockgen
+      - test -f {{.DEPS_DIR}}/gotestsum
+      - test -f {{.DEPS_DIR}}/migrate
+      - test -f {{.DEPS_DIR}}/golangci-lint
+      - test -f {{.DEPS_DIR}}/goimports
+    cmds:
+      - mkdir -p {{.DEPS_DIR}}
+      - |
+        GOBIN="{{.DEPS_DIR}}" go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+        GOBIN="{{.DEPS_DIR}}" go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+        GOBIN="{{.DEPS_DIR}}" go install go.uber.org/mock/mockgen@latest
+        GOBIN="{{.DEPS_DIR}}" go install gotest.tools/gotestsum@latest 
+        GOBIN="{{.DEPS_DIR}}" go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+        GOBIN="{{.DEPS_DIR}}" go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+        GOBIN="{{.DEPS_DIR}}" go install golang.org/x/tools/cmd/goimports@latest
+      - go mod download
+
+ # Generate code
+
+  gen:
+    desc: Generate code from protobuf and mocks
+    cmds:
+      - task: gen-proto
+      - task: gen-mock
+
+  gen-proto:
+    desc: Generate Go code from protobuf files
+    deps: [deps]
+    cmds:
+      - mkdir -p {{.PROTO_OUT_DIR}}
+      - PATH={{.DEPS_DIR}}:$PATH protoc --go_out={{.PROTO_OUT_DIR}} --go_opt=paths=source_relative --go-grpc_out={{.PROTO_OUT_DIR}} --go-grpc_opt=paths=source_relative --go-grpc_opt=require_unimplemented_servers=false --proto_path={{.PROTO_DIR}} {{.PROTO_DIR}}/budget.proto
+
+  gen-mock:
+    desc: Generate mocks for all interfaces
+    deps: [deps]
+    cmds:
+      - PATH={{.DEPS_DIR}}:$PATH go generate ./...
+      - go mod tidy
+
+  # Build
+
+  build:
+    desc: Build binary file
+    cmds:
+      - go build -o bin/{{.BINARY_NAME}} ./cmd/server
+
+  run:
+    desc: Run server
+    cmds:
+      - go run ./cmd/server
+
+  # Test
+
+  test:
+    desc: Run all tests
+    deps: [deps]
+    cmds:
+      - PATH={{.DEPS_DIR}}:$PATH gotestsum --format pkgname --packages="$(go list ./...)" || go test ./...
+
+  test-coverage:
+    desc: Run tests with coverage
+    cmds:
+      - go test -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out -o coverage.html
+
+  # Lint
+
+  fmt:
+    desc: Format code using golangci-lint
+    deps: [deps]
+    cmds:
+      - PATH={{.DEPS_DIR}}:$PATH gofmt -s -w .
+      - PATH={{.DEPS_DIR}}:$PATH goimports -w .
+      - PATH={{.DEPS_DIR}}:$PATH golangci-lint run --fix ./...
+
+  lint:
+    desc: Run linter
+    deps: [deps]
+    cmds:
+      - PATH={{.DEPS_DIR}}:$PATH golangci-lint run ./...
+
+  # Docker
+
+  docker-up:
+    desc: Start PostgreSQL in Docker
+    cmds:
+      - docker-compose up -d
+
+  docker-down:
+    desc: Stop PostgreSQL in Docker
+    cmds:
+      - docker-compose down

@@ -16,10 +16,10 @@ func NewWebHookQueue(rdb *redis.Client) *WebHookQueue {
 	return &WebHookQueue{rdb: rdb}
 }
 
-func (w *WebHookQueue) EnqueueWebHook(ctx context.Context, webhook *dto.WebHookDTO) error {
+func (w *WebHookQueue) EnqueueWebHook(ctx context.Context, webhook *dto.WebHookDTO, key string) error {
 	data, err := json.Marshal(webhook)
 	if err != nil {
 		return err
 	}
-	return w.rdb.RPush(ctx, "queue:webhooks", data).Err()
+	return w.rdb.RPush(ctx, key, data).Err()
 }

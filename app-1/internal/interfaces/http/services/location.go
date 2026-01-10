@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/models"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/repo"
 )
 
@@ -15,9 +17,10 @@ func NewLocationService(repo *repo.LocationRepo) *LocationService {
 	return &LocationService{repo: repo}
 }
 
-func (h *LocationService) CreateLocationService(ctx context.Context, dto *dto.LocationDTO, userID string) error {
-	if err := h.repo.CreateLocationRepo(ctx, dto, userID); err != nil {
-		return err
+func (h *LocationService) CreateLocationService(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
+	zones, err := h.repo.CreateLocationRepo(ctx, dto, userID)
+	if err != nil {
+		return nil, fmt.Errorf("repo.CreateLocationRepo: %w", err)
 	}
-	return nil
+	return zones, nil
 }

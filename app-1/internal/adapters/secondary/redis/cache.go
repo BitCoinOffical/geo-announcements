@@ -2,16 +2,20 @@ package redis
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/BitCoinOffical/geo-announcements/app-1/config"
 	"github.com/redis/go-redis/v9"
 )
 
-func NewRedis() *redis.Client {
+const (
+	numCacheDB = 0
+)
+
+func NewRedis(cfg *config.RedisConfig) *redis.Client {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", os.Getenv("RDB_HOST"), os.Getenv("RDB_PORT")),
-		Password: os.Getenv("RDB_PASSWORD"),
-		DB:       0,
+		Addr:     fmt.Sprintf("%s:%s", cfg.RDB_HOST, cfg.RDB_PORT),
+		Password: cfg.RDB_PASSWORD,
+		DB:       numCacheDB,
 	})
 	return rdb
 }

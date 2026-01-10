@@ -7,40 +7,43 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
+	"github.com/BitCoinOffical/geo-announcements/app-1/config"
 	rdb "github.com/BitCoinOffical/geo-announcements/app-1/internal/adapters/secondary/redis"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
-	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 )
 
-func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println(err)
-	}
-	workers, err := strconv.Atoi(os.Getenv("WORKERS"))
-	if err != nil {
-		workers = 1
-		log.Println(err)
-	}
-	retry, err := strconv.Atoi(os.Getenv("RETRY"))
-	if err != nil {
-		retry = 5
-		log.Println("error:", err)
-	}
-	rdb := rdb.NewWebhookRedis()
-	WebhookWorker(context.Background(), rdb, workers, retry)
+type WebhookWorker struct {
+	rdb     *redis.Client
+	Workers int
+	Retry   int
+	Key     string
 }
-func WebhookWorker(ctx context.Context, rdb *redis.Client, workers int, retry int) {
+
+func main() {
+	cfg, err := config.NewLoadConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	rdb := rdb.NewWebhookRedis(&cfg.Redis)
+
+	w := NewWebhookWorker(rdb, cfg.App.RETRY, cfg.App.WORKERS, cfg.App.QUEUE_KEY)
+	w.WebhookWorker(context.Background())
+}
+
+func NewWebhookWorker(rdb *redis.Client, Retry, Workers int, Key string) *WebhookWorker {
+	return &WebhookWorker{rdb: rdb, Retry: Retry, Workers: Workers, Key: Key}
+}
+
+func (w *WebhookWorker) WebhookWorker(ctx context.Context) {
 	wg := &sync.WaitGroup{}
-	for range workers {
+	for range w.Workers {
 		wg.Go(func() {
 			for {
-				result, err := rdb.BLPop(ctx, 0, "queue:webhooks").Result()
+				result, err := w.rdb.BLPop(ctx, 0, w.Key).Result()
 				if err != nil {
 					log.Println("BLPop>", err)
 					continue
@@ -60,7 +63,7 @@ func WebhookWorker(ctx context.Context, rdb *redis.Client, workers int, retry in
 					continue
 				}
 				webhook.RetryCount++
-				if webhook.RetryCount > retry {
+				if webhook.RetryCount > w.Retry {
 					log.Println("send webhook failed")
 					continue
 				}
@@ -70,7 +73,7 @@ func WebhookWorker(ctx context.Context, rdb *redis.Client, workers int, retry in
 					if err != nil {
 						log.Println(err)
 					}
-					rdb.RPush(ctx, "queue:webhooks", b)
+					w.rdb.RPush(ctx, "queue:webhooks", b)
 				})
 
 			}
