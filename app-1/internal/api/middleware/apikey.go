@@ -1,10 +1,8 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
 
-	"github.com/BitCoinOffical/geo-announcements/app-1/config"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,11 +11,10 @@ const (
 	message = "Invalid API Key"
 )
 
-func CheckApiKey(cfg *config.AppConfig) gin.HandlerFunc {
+func CheckApiKey(appApiKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey := c.Request.Header.Get(apiKey)
-		log.Println(cfg.API_KEY)
-		if apiKey != cfg.API_KEY {
+		if apiKey != appApiKey {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"message": message,
 			})

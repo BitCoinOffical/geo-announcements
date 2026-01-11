@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -19,11 +20,11 @@ func NewIncidentRepo(db *sql.DB) *IncidentRepo {
 	return &IncidentRepo{db: db}
 }
 
-func (h *IncidentRepo) GetTopRepo(ctx context.Context, limit int) ([]models.Incident, error) {
+func (h *IncidentRepo) GetTop(ctx context.Context, limit int) ([]models.Incident, error) {
 	query := `SELECT * FROM incidents WHERE status = 'public' ORDER BY incident_id ASC LIMIT $1`
 	rows, err := h.db.QueryContext(ctx, query, limit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("db.QueryContext: %w", err)
 	}
 	var incidents []models.Incident
 	for rows.Next() {
@@ -37,18 +38,18 @@ func (h *IncidentRepo) GetTopRepo(ctx context.Context, limit int) ([]models.Inci
 			&incident.Update_at,
 			&incident.Deleted_at,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("rows.Scan: %w", err)
 		}
 		incidents = append(incidents, incident)
 	}
 	return incidents, nil
 }
 
-func (h *IncidentRepo) GetIncidentsRepo(ctx context.Context, limit, offset int) ([]models.Incident, error) {
+func (h *IncidentRepo) GetIncidents(ctx context.Context, limit, offset int) ([]models.Incident, error) {
 	query := `SELECT * FROM incidents WHERE status = 'public' ORDER BY incident_id ASC LIMIT $1 OFFSET $2;`
 	rows, err := h.db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("db.QueryContext: %w", err)
 	}
 	var incidents []models.Incident
 	for rows.Next() {
@@ -62,14 +63,14 @@ func (h *IncidentRepo) GetIncidentsRepo(ctx context.Context, limit, offset int) 
 			&incident.Update_at,
 			&incident.Deleted_at,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("rows.Scan: %w", err)
 		}
 		incidents = append(incidents, incident)
 	}
 	return incidents, nil
 }
 
-func (h *IncidentRepo) GetIncidentByIDRepo(ctx context.Context, id int) (*models.Incident, error) {
+func (h *IncidentRepo) GetIncidentByID(ctx context.Context, id int) (*models.Incident, error) {
 	query := `SELECT * FROM incidents WHERE incident_id = $1`
 	row := h.db.QueryRowContext(ctx, query, id)
 	var incident models.Incident
@@ -86,13 +87,13 @@ func (h *IncidentRepo) GetIncidentByIDRepo(ctx context.Context, id int) (*models
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("incident not found")
 		}
-		return nil, err
+		return nil, fmt.Errorf("rows.Scan: %w", err)
 	}
 	return &incident, nil
 
 }
 
-func (h *IncidentRepo) GetIncidentStatRepo(ctx context.Context, fromTime *time.Time) (*models.UsersInDangerousZones, error) {
+func (h *IncidentRepo) GetIncidentStat(ctx context.Context, fromTime *time.Time) (*models.UsersInDangerousZones, error) {
 	query := `SELECT COUNT(DISTINCT user_id), zone_id FROM user_checks_loс WHERE create_at >= $1 GROUP BY zone_id`
 	row := h.db.QueryRowContext(ctx, query, fromTime)
 	var users models.UsersInDangerousZones
@@ -101,23 +102,24 @@ func (h *IncidentRepo) GetIncidentStatRepo(ctx context.Context, fromTime *time.T
 		&users.Zone_id,
 	)
 	if err != nil {
-		log.Println(err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("incident not found: ")
 		}
-		return nil, err
+		return nil, fmt.Errorf("rows.Scan: %w", err)
 	}
 	return &users, nil
 }
 
-func (h *IncidentRepo) CreateIncidentsRepo(ctx context.Context, dto *dto.IncidentDTO) error {
+func (h *IncidentRepo) CreateIncidents(ctx context.Context, dto *dto.IncidentDTO) error {
 	tx, err := h.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("db.BeginTx: %w", err)
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			log.Printf("tx rollback error: %v", err)
+		if err != nil {
+			if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+				log.Printf("tx rollback error: %v", err)
+			}
 		}
 	}()
 
@@ -128,7 +130,7 @@ func (h *IncidentRepo) CreateIncidentsRepo(ctx context.Context, dto *dto.Inciden
 		dto.Lon,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("tx.ExecContext: %w", err)
 	}
 	_, err = tx.ExecContext(
 		ctx,
@@ -149,20 +151,26 @@ func (h *IncidentRepo) CreateIncidentsRepo(ctx context.Context, dto *dto.Inciden
 		dto.Lat,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("tx.ExecContext: %w", err)
 	}
 
 	return tx.Commit()
 }
 
-func (h *IncidentRepo) UpdateIncidentsByIDRepo(ctx context.Context, dto *dto.IncidentDTO, id int) error {
+func (h *IncidentRepo) UpdateIncidentsByID(ctx context.Context, dto *dto.IncidentDTO, id int) error {
 	query := `UPDATE incidents SET lat = $1, lon = $2, update_at = NOW() WHERE incident_id = $3`
 	_, err := h.db.ExecContext(ctx, query, dto.Lat, dto.Lon, id)
-	return err
+	if err != nil {
+		return fmt.Errorf("db.ExecContext: %w", err)
+	}
+	return nil
 }
 
-func (h *IncidentRepo) DeleteIncidentsByIDRepo(ctx context.Context, id int) error {
+func (h *IncidentRepo) DeleteIncidentsByID(ctx context.Context, id int) error {
 	query := `UPDATE incidents SET status = 'hide', deleted_at = NOW() WHERE incident_id = $1`
 	_, err := h.db.ExecContext(ctx, query, id)
-	return err
+	if err != nil {
+		return fmt.Errorf("db.ExecContext: %w", err)
+	}
+	return nil
 }

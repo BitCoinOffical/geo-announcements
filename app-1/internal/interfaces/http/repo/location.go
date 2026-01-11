@@ -18,14 +18,16 @@ func NewLocationRepo(db *sql.DB) *LocationRepo {
 	return &LocationRepo{db: db}
 }
 
-func (h *LocationRepo) CreateLocationRepo(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
+func (h *LocationRepo) CreateLocation(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
 	tx, err := h.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
-			log.Printf("tx rollback error: %v", err)
+		if err != nil {
+			if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
+				log.Printf("tx rollback error: %v", err)
+			}
 		}
 	}()
 	row, err := tx.ExecContext(ctx, `

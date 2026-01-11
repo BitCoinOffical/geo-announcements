@@ -30,7 +30,7 @@ func NewIncidentService(incidentRepo *repo.IncidentRepo, cache *cache.IncidentCa
 	return &IncidentService{incidentRepo: incidentRepo, cache: cache, logger: logger}
 }
 
-func (h *IncidentService) GetIncidentsService(ctx context.Context, page, limit int) ([]models.Incident, error) {
+func (h *IncidentService) GetIncidents(ctx context.Context, page, limit int) ([]models.Incident, error) {
 	offset := (page - 1) * limit
 	if page <= maxPage {
 		all, err := h.cache.GetTop(ctx)
@@ -52,7 +52,7 @@ func (h *IncidentService) GetIncidentsService(ctx context.Context, page, limit i
 			return all[start:end], nil
 		}
 
-		rows, err := h.incidentRepo.GetTopRepo(ctx, topLimit)
+		rows, err := h.incidentRepo.GetTop(ctx, topLimit)
 		if err != nil {
 			return nil, fmt.Errorf("incidentRepo.GetTopRepo: %w", err)
 		}
@@ -75,7 +75,7 @@ func (h *IncidentService) GetIncidentsService(ctx context.Context, page, limit i
 		return rows, nil
 	}
 
-	rows, err = h.incidentRepo.GetIncidentsRepo(ctx, limit, offset)
+	rows, err = h.incidentRepo.GetIncidents(ctx, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("incidentRepo.GetIncidentsRepo: %w", err)
 	}
@@ -88,7 +88,7 @@ func (h *IncidentService) GetIncidentsService(ctx context.Context, page, limit i
 	return rows, nil
 }
 
-func (h *IncidentService) GetIncidentByIDService(ctx context.Context, id int) (*models.Incident, error) {
+func (h *IncidentService) GetIncidentByID(ctx context.Context, id int) (*models.Incident, error) {
 	row, err := h.cache.Get(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("cache.Get %w", err)
@@ -98,7 +98,7 @@ func (h *IncidentService) GetIncidentByIDService(ctx context.Context, id int) (*
 		return row, nil
 	}
 
-	row, err = h.incidentRepo.GetIncidentByIDRepo(ctx, id)
+	row, err = h.incidentRepo.GetIncidentByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("incidentRepo.GetIncidentByIDRepo %w", err)
 	}
@@ -111,25 +111,25 @@ func (h *IncidentService) GetIncidentByIDService(ctx context.Context, id int) (*
 	return row, nil
 }
 
-func (h *IncidentService) GetIncidentStatService(ctx context.Context, cfg *config.AppConfig) (*models.UsersInDangerousZones, error) {
-	fromTime := time.Now().Add(-time.Duration(cfg.STATS_TIME_WINDOW_MINUTES) * time.Minute)
-	users, err := h.incidentRepo.GetIncidentStatRepo(ctx, &fromTime)
+func (h *IncidentService) GetIncidentStat(ctx context.Context, cfg *config.AppConfig) (*models.UsersInDangerousZones, error) {
+	fromTime := time.Now().Add(-time.Duration(cfg.StatsTimeWindowMinutes) * time.Minute)
+	users, err := h.incidentRepo.GetIncidentStat(ctx, &fromTime)
 	if err != nil {
 		return nil, fmt.Errorf("incidentRepo.GetIncidentStatRepo: %w", err)
 	}
 	return users, nil
 }
 
-func (h *IncidentService) CreateIncidentsService(ctx context.Context, dto *dto.IncidentDTO) error {
-	if err := h.incidentRepo.CreateIncidentsRepo(ctx, dto); err != nil {
+func (h *IncidentService) CreateIncidents(ctx context.Context, dto *dto.IncidentDTO) error {
+	if err := h.incidentRepo.CreateIncidents(ctx, dto); err != nil {
 		return fmt.Errorf("incidentRepo.CreateIncidentsRepo: %w", err)
 	}
 	return nil
 }
 
-func (h *IncidentService) UpdateIncidentsByIDService(ctx context.Context, dto *dto.IncidentDTO, id int) error {
+func (h *IncidentService) UpdateIncidentsByID(ctx context.Context, dto *dto.IncidentDTO, id int) error {
 
-	if err := h.incidentRepo.UpdateIncidentsByIDRepo(ctx, dto, id); err != nil {
+	if err := h.incidentRepo.UpdateIncidentsByID(ctx, dto, id); err != nil {
 		return fmt.Errorf("incidentRepo.UpdateIncidentsByIDRepo: %w", err)
 	}
 
@@ -140,8 +140,8 @@ func (h *IncidentService) UpdateIncidentsByIDService(ctx context.Context, dto *d
 	return nil
 }
 
-func (h *IncidentService) DeleteIncidentsByIDService(ctx context.Context, id int) error {
-	if err := h.incidentRepo.DeleteIncidentsByIDRepo(ctx, id); err != nil {
+func (h *IncidentService) DeleteIncidentsByID(ctx context.Context, id int) error {
+	if err := h.incidentRepo.DeleteIncidentsByID(ctx, id); err != nil {
 		return fmt.Errorf("incidentRepo.DeleteIncidentsByIDRepo: %w", err)
 	}
 

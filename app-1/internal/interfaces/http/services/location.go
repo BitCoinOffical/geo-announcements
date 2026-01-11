@@ -17,8 +17,8 @@ func NewLocationService(repo *repo.LocationRepo) *LocationService {
 	return &LocationService{repo: repo}
 }
 
-func (h *LocationService) CreateLocationService(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
-	zones, err := h.repo.CreateLocationRepo(ctx, dto, userID)
+func (h *LocationService) CreateLocation(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
+	zones, err := h.repo.CreateLocation(ctx, dto, userID)
 	if err != nil {
 		return nil, fmt.Errorf("repo.CreateLocationRepo: %w", err)
 	}

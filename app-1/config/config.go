@@ -1,7 +1,16 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/caarlos0/env"
+)
+
+type Env string
+
+const (
+	EnvProd = "prod"
+	EnvDev  = "dev"
 )
 
 type Config struct {
@@ -11,27 +20,27 @@ type Config struct {
 }
 
 type PostgresConfig struct {
-	DB_HOST     string `env:"DB_HOST"`
-	DB_PORT     string `env:"DB_PORT"`
-	DB_USER     string `env:"DB_USER"`
-	DB_PASSWORD string `env:"DB_PASSWORD"`
-	DB_NAME     string `env:"DB_NAME"`
+	DBHost     string `env:"DB_HOST"`
+	DBport     string `env:"DB_PORT"`
+	DBUser     string `env:"DB_USER"`
+	DBPassword string `env:"DB_PASSWORD"`
+	DBName     string `env:"DB_NAME"`
 }
 
 type RedisConfig struct {
-	RDB_HOST     string `env:"RDB_HOST"`
-	RDB_PORT     string `env:"RDB_PORT"`
-	RDB_PASSWORD string `env:"RDB_PASSWORD"`
+	RDBHost     string `env:"RDB_HOST"`
+	RDBPort     string `env:"RDB_PORT"`
+	RDBPassword string `env:"RDB_PASSWORD"`
 }
 
 type AppConfig struct {
-	API_KEY                   string `env:"API_KEY"`
-	QUEUE_KEY                 string `env:"QUEUE_KEY"`
-	STATS_TIME_WINDOW_MINUTES int    `env:"STATS_TIME_WINDOW_MINUTES"`
-	WEBHOOK_URL               string `env:"WEBHOOK_URL"`
-	WORKERS                   int    `env:"WORKERS"`
-	RETRY                     int    `env:"RETRY"`
-	DEBUG_LEVEL               string `env:"DEBUG_LEVEL"`
+	ApiKey                 string `env:"API_KEY"`
+	QueueKey               string `env:"QUEUE_KEY"`
+	StatsTimeWindowMinutes int    `env:"STATS_TIME_WINDOW_MINUTES"`
+	WebhookUrl             string `env:"WEBHOOK_URL"`
+	WorkersCount           int    `env:"WORKERS_COUNT"`
+	SendWebhookRetry       int    `env:"SEND_WEBHOOK_RETRY"`
+	DebugLevel             string `env:"DEBUG_LEVEL"`
 }
 
 func NewLoadConfig() (*Config, error) {
@@ -44,6 +53,10 @@ func NewLoadConfig() (*Config, error) {
 	}
 	if err := env.Parse(&cfg.App); err != nil {
 		return nil, err
+	}
+	var env Env = Env(cfg.App.DebugLevel)
+	if env != EnvProd && env != EnvDev {
+		return nil, fmt.Errorf("incorrect debug level: %s", env)
 	}
 	return &cfg, nil
 }

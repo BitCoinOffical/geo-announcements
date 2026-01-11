@@ -13,8 +13,8 @@ const (
 
 func NewWebhookRedis(cfg *config.RedisConfig) *redis.Client {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", cfg.RDB_HOST, cfg.RDB_PORT),
-		Password: cfg.RDB_PASSWORD,
+		Addr:     fmt.Sprintf("%s:%s", cfg.RDBHost, cfg.RDBPort),
+		Password: cfg.RDBPassword,
 		DB:       numWebHookDB,
 	})
 	return rdb

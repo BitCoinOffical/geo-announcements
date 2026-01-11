@@ -6,19 +6,19 @@ import (
 	"time"
 
 	"github.com/BitCoinOffical/geo-announcements/app-1/config"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/api/response"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/queue"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/response"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/services"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/retry"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 const (
-	ClientID    = "X-Client-Id"
-	timeOut     = 5
-	maxAttempts = 5
+	ClientID = "X-Client-Id"
+	timeOut  = 5
 )
 
 type LocationHandler struct {
@@ -51,7 +51,7 @@ func (h *LocationHandler) CreateLocationHandler(c *gin.Context) {
 		return
 	}
 
-	zones, err := h.service.CreateLocationService(c.Request.Context(), &dt, userID)
+	zones, err := h.service.CreateLocation(c.Request.Context(), &dt, userID)
 	if err != nil {
 		h.logger.Error("create location error", zap.Error(err))
 		return
@@ -62,27 +62,13 @@ func (h *LocationHandler) CreateLocationHandler(c *gin.Context) {
 		ctx, canel := context.WithTimeout(context.Background(), timeOut*time.Second)
 		defer canel()
 		webhook := dto.WebHookDTO{
-			URL:        h.cfg.WEBHOOK_URL,
+			URL:        h.cfg.WebhookUrl,
 			User_id:    userID,
 			Payload:    dt,
 			RetryCount: 0,
 		}
-		for i := range maxAttempts {
-			if i == maxAttempts {
-				h.logger.Error("exceeded the number of attempts")
-				break
-			}
-			if err := h.queue.EnqueueWebHook(ctx, &webhook, h.cfg.QUEUE_KEY); err == nil {
-				return
-			}
-			h.logger.Error("enqueue webhook error", zap.Error(err))
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(time.Second):
-				continue
-			}
-		}
+		retry.Retry(ctx, &webhook, h.logger, h.queue, h.cfg)
+
 	}()
 
 }
