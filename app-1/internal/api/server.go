@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/api/handlers"
@@ -9,38 +8,42 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Routers struct {
+type Server struct {
 	h         *handlers.IncidentHandler
 	sh        *handlers.SystemHandler
 	loc       *handlers.LocationHandler
 	appApiKey string
+	engine    *gin.Engine
 }
 
-func NewRouters(h *handlers.IncidentHandler, sh *handlers.SystemHandler, loc *handlers.LocationHandler, appApiKey string) *Routers {
-	return &Routers{h: h, sh: sh, loc: loc, appApiKey: appApiKey}
+func NewServer() *Server {
+	engine := gin.New()
+	return &Server{engine: engine}
 }
 
-func (r *Routers) Routers() {
+func (s *Server) RegisterRoutes(h *handlers.IncidentHandler, sh *handlers.SystemHandler, loc *handlers.LocationHandler, appApiKey string) *Server {
+	return &Server{h: h, sh: sh, loc: loc, appApiKey: appApiKey}
+}
 
-	g := gin.New()
+func (s *Server) Routes() {
 
-	g.GET("/", func(ctx *gin.Context) {
+	s.engine.GET("/", func(ctx *gin.Context) {
 		ctx.Redirect(http.StatusMovedPermanently, "/api/v1")
 	})
 
-	rout := g.Group("/api/v1")
+	rout := s.engine.Group("/api/v1")
 	{
-		rout.GET("/incidents/", middleware.CheckApiKey(r.appApiKey), r.h.GetIncidentsHandler)
-		rout.GET("/incidents", middleware.CheckApiKey(r.appApiKey), r.h.GetIncidentByIDHandler)
-		rout.POST("/incidents", middleware.CheckApiKey(r.appApiKey), r.h.CreateIncidentsHandler)
-		rout.PUT("/incidents", middleware.CheckApiKey(r.appApiKey), r.h.UpdateIncidentsByIDHandler)
-		rout.DELETE("/incidents", middleware.CheckApiKey(r.appApiKey), r.h.DeleteIncidentsByIDHandler)
-		rout.GET("/incidents/stats", middleware.CheckApiKey(r.appApiKey), r.h.GetIncidentStatHandler)
-		rout.GET("/system/health", middleware.CheckApiKey(r.appApiKey), r.sh.GetSystemHealth)
-		rout.POST("/location/check", r.loc.CreateLocationHandler)
+		rout.GET("/incidents/", middleware.CheckApiKey(s.appApiKey), s.h.GetIncidentsHandler)
+		rout.GET("/incidents", middleware.CheckApiKey(s.appApiKey), s.h.GetIncidentByIDHandler)
+		rout.POST("/incidents", middleware.CheckApiKey(s.appApiKey), s.h.CreateIncidentsHandler)
+		rout.PUT("/incidents", middleware.CheckApiKey(s.appApiKey), s.h.UpdateIncidentsByIDHandler)
+		rout.DELETE("/incidents", middleware.CheckApiKey(s.appApiKey), s.h.DeleteIncidentsByIDHandler)
+		rout.GET("/incidents/stats", middleware.CheckApiKey(s.appApiKey), s.h.GetIncidentStatHandler)
+		rout.GET("/system/health", middleware.CheckApiKey(s.appApiKey), s.sh.GetSystemHealth)
+		rout.POST("/location/check", s.loc.CreateLocationHandler)
 	}
 
-	if err := g.Run(); err != nil {
-		log.Fatal(err)
-	}
+}
+func (s *Server) Run(addr string) error {
+	return s.engine.Run(addr)
 }

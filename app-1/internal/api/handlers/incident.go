@@ -7,7 +7,6 @@ import (
 	"github.com/BitCoinOffical/geo-announcements/app-1/config"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/api/response"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/services"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -15,10 +14,10 @@ import (
 type IncidentHandler struct {
 	cfg     *config.AppConfig
 	logger  *zap.Logger
-	service *services.IncidentService
+	service incidentService
 }
 
-func NewIncidentHandler(service *services.IncidentService, logger *zap.Logger, cfg *config.AppConfig) *IncidentHandler {
+func NewIncidentHandler(service incidentService, logger *zap.Logger, cfg *config.AppConfig) *IncidentHandler {
 	return &IncidentHandler{service: service, logger: logger, cfg: cfg}
 }
 

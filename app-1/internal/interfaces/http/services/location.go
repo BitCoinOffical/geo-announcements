@@ -6,14 +6,13 @@ import (
 
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/models"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/repo"
 )
 
 type LocationService struct {
-	repo *repo.LocationRepo
+	repo locationRepository
 }
 
-func NewLocationService(repo *repo.LocationRepo) *LocationService {
+func NewLocationService(repo locationRepository) *LocationService {
 	return &LocationService{repo: repo}
 }
 

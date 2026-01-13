@@ -9,7 +9,6 @@ import (
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/api/response"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/queue"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/services"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/retry"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -24,11 +23,11 @@ const (
 type LocationHandler struct {
 	cfg     *config.AppConfig
 	logger  *zap.Logger
-	service *services.LocationService
+	service locationService
 	queue   *queue.WebHookQueue
 }
 
-func NewLocationHandler(service *services.LocationService, queue *queue.WebHookQueue, logger *zap.Logger, cfg *config.AppConfig) *LocationHandler {
+func NewLocationHandler(service locationService, queue *queue.WebHookQueue, logger *zap.Logger, cfg *config.AppConfig) *LocationHandler {
 	return &LocationHandler{service: service, queue: queue, logger: logger, cfg: cfg}
 }
 

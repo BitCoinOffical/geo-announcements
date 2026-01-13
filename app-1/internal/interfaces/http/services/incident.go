@@ -6,10 +6,8 @@ import (
 	"time"
 
 	"github.com/BitCoinOffical/geo-announcements/app-1/config"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/cache"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/models"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/repo"
 	"go.uber.org/zap"
 )
 
@@ -22,11 +20,11 @@ const (
 
 type IncidentService struct {
 	logger       *zap.Logger
-	incidentRepo *repo.IncidentRepo
-	cache        *cache.IncidentCache
+	incidentRepo incidentRepository
+	cache        incidentCache
 }
 
-func NewIncidentService(incidentRepo *repo.IncidentRepo, cache *cache.IncidentCache, logger *zap.Logger) *IncidentService {
+func NewIncidentService(incidentRepo incidentRepository, cache incidentCache, logger *zap.Logger) *IncidentService {
 	return &IncidentService{incidentRepo: incidentRepo, cache: cache, logger: logger}
 }
 

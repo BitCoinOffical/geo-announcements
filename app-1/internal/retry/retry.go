@@ -20,6 +20,7 @@ func Retry(ctx context.Context, webhook *dto.WebHookDTO, logger *zap.Logger, que
 			logger.Error("exceeded the number of attempts")
 			break
 		}
+
 		err := queue.EnqueueWebHook(ctx, webhook, cfg.QueueKey)
 		if err == nil {
 			return

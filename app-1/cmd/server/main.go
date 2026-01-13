@@ -69,10 +69,15 @@ func main() {
 	cacheRdb := redis.NewRedis(&cfg.Redis)
 	queueRdb := redis.NewWebhookRedis(&cfg.Redis)
 
-	h := handlers.NewIncidentHandler(services.NewIncidentService(repo.NewIncidentRepo(db), cache.NewIncidentCache(cacheRdb), logger), logger, &cfg.App)
-	sh := handlers.NewSystemHandler(db, cacheRdb, logger)
-	loc := handlers.NewLocationHandler(services.NewLocationService(repo.NewLocationRepo(db)), queue.NewWebHookQueue(queueRdb), logger, &cfg.App)
+	service := services.NewRepos(repo.NewIncidentRepo(db), repo.NewLocationRepo(db), cache.NewIncidentCache(cacheRdb))
+	handl := handlers.NewServices(services.NewIncidentService(service.IncidentRepo, service.IncidentCache, logger), services.NewLocationService(service.LocationRepo))
 
-	api.NewRouters(h, sh, loc, cfg.App.ApiKey).Routers()
+	h := handlers.NewIncidentHandler(handl.Incident, logger, &cfg.App)
+	sh := handlers.NewSystemHandler(db, cacheRdb, logger)
+	loc := handlers.NewLocationHandler(handl.Location, queue.NewWebHookQueue(queueRdb), logger, &cfg.App)
+
+	server := api.NewServer()
+	server.Run(":8080")
+	server.RegisterRoutes(h, sh, loc, cfg.App.ApiKey).Routes()
 
 }

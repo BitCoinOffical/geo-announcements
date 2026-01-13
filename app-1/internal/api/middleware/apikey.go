@@ -13,8 +13,8 @@ const (
 
 func CheckApiKey(appApiKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		apiKey := c.Request.Header.Get(apiKey)
-		if apiKey != appApiKey {
+		key := c.Request.Header.Get(apiKey)
+		if key != appApiKey {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"message": message,
 			})
