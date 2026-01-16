@@ -45,7 +45,7 @@ func (h *IncidentRepo) GetTop(ctx context.Context, limit int) ([]models.Incident
 }
 
 func (h *IncidentRepo) GetIncidents(ctx context.Context, limit, offset int) ([]models.Incident, error) {
-	query := `SELECT * FROM incidents WHERE status = 'public' ORDER BY incident_id ASC LIMIT $1 OFFSET $2;`
+	query := `SELECT * FROM incidents WHERE status = 'public' ORDER BY incident_id ASC LIMIT $1 OFFSET $2`
 	rows, err := h.db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("db.QueryContext: %w", err)
@@ -102,7 +102,7 @@ func (h *IncidentRepo) GetIncidentStat(ctx context.Context, fromTime *time.Time)
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("incident not found: ")
+			return nil, errors.New("incident not found")
 		}
 		return nil, fmt.Errorf("rows.Scan: %w", err)
 	}
@@ -129,8 +129,8 @@ func (h *IncidentRepo) UpdateZones(ctx context.Context, dto *dto.IncidentDTO) er
 	queue := `UPDATE zones SET is_dangerous = TRUE WHERE zone_id = (SELECT z.zone_id FROM zones z WHERE ST_Contains(
 			z.wkb_geometry,
 			ST_SetSRID(ST_MakePoint($1, $2), 4326)
-			) LIMIT 1;`
-	_, err := h.db.ExecContext(ctx, queue, dto.Lat, dto.Lon)
+			) LIMIT 1)`
+	_, err := h.db.ExecContext(ctx, queue, dto.Lon, dto.Lat)
 	if err != nil {
 		return fmt.Errorf("db.ExecContext: %w", err)
 	}

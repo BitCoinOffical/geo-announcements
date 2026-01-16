@@ -9,8 +9,8 @@ import (
 type Env string
 
 const (
-	EnvProd = "prod"
-	EnvDev  = "dev"
+	EnvProd = "Prod"
+	EnvDev  = "Dev"
 )
 
 type Config struct {

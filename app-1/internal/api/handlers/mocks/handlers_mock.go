@@ -183,18 +183,18 @@ func (mr *MocklocationServiceMockRecorder) CreateLocation(ctx, arg1, userID any)
 }
 
 // GetDangerZones mocks base method.
-func (m *MocklocationService) GetDangerZones(ctx context.Context, arg1 *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
+func (m *MocklocationService) GetDangerZones(ctx context.Context, arg1 *dto.LocationDTO) ([]models.DangerousZones, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDangerZones", ctx, arg1, userID)
+	ret := m.ctrl.Call(m, "GetDangerZones", ctx, arg1)
 	ret0, _ := ret[0].([]models.DangerousZones)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetDangerZones indicates an expected call of GetDangerZones.
-func (mr *MocklocationServiceMockRecorder) GetDangerZones(ctx, arg1, userID any) *gomock.Call {
+func (mr *MocklocationServiceMockRecorder) GetDangerZones(ctx, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDangerZones", reflect.TypeOf((*MocklocationService)(nil).GetDangerZones), ctx, arg1, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDangerZones", reflect.TypeOf((*MocklocationService)(nil).GetDangerZones), ctx, arg1)
 }
 
 // MockwebhookRetry is a mock of webhookRetry interface.

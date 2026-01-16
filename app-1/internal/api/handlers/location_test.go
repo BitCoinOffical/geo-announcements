@@ -51,7 +51,7 @@ func TestCreateLocationHandler_request_ok(t *testing.T) {
 
 	h := handlers.NewLocationHandler(locSvc, logger, &cfg.App, retry)
 	locSvc.EXPECT().CreateLocation(gomock.Any(), gomock.AssignableToTypeOf(&dto.LocationDTO{}), gomock.Any()).Return(nil)
-	locSvc.EXPECT().GetDangerZones(gomock.Any(), gomock.AssignableToTypeOf(&dto.LocationDTO{}), gomock.Any()).Return([]models.DangerousZones{}, nil)
+	locSvc.EXPECT().GetDangerZones(gomock.Any(), gomock.AssignableToTypeOf(&dto.LocationDTO{})).Return([]models.DangerousZones{}, nil)
 	body, _ := json.Marshal(map[string]any{
 		"lat": 55.755,
 		"lon": 37.617,

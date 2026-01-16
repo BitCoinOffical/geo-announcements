@@ -18,7 +18,12 @@ func NewLocationRepo(db *sql.DB) *LocationRepo {
 }
 
 func (h *LocationRepo) CreateLocation(ctx context.Context, dto *dto.LocationDTO, userID string) error {
-	query := `INSERT INTO locations (user_id, lat, lon ) VALUES ($1, $2, $3)`
+	query := `
+	    INSERT INTO user_checks_loс (user_id, lat, lon, zone_id)
+		SELECT $1, $2, $3, z.zone_id
+		FROM zones z
+		WHERE ST_Within(ST_SetSRID(ST_MakePoint($3, $2), 4326), z.wkb_geometry)
+		LIMIT 1 RETURNING location_id;`
 	res, err := h.db.ExecContext(ctx, query, userID, dto.Lat, dto.Lon)
 	if err != nil {
 		return err
@@ -34,7 +39,7 @@ func (h *LocationRepo) CreateLocation(ctx context.Context, dto *dto.LocationDTO,
 
 }
 
-func (h *LocationRepo) GetDangerZones(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
+func (h *LocationRepo) GetDangerZones(ctx context.Context, dto *dto.LocationDTO) ([]models.DangerousZones, error) {
 	query := `
 	SELECT z.zone_id, z.lat, z.lon,
 		ST_Distance(
@@ -43,7 +48,7 @@ func (h *LocationRepo) GetDangerZones(ctx context.Context, dto *dto.LocationDTO,
 		) AS distanc FROM zones z
 		WHERE z.is_dangerous = TRUE
 		ORDER BY z.wkb_geometry <-> ST_SetSRID(ST_Point($1, $2), 4326) LIMIT 5;`
-	rows, err := h.db.QueryContext(ctx, query, userID, dto.Lat, dto.Lon)
+	rows, err := h.db.QueryContext(ctx, query, dto.Lon, dto.Lat)
 	if err != nil {
 		return nil, err
 	}

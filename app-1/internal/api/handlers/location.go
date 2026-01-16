@@ -53,7 +53,7 @@ func (h *LocationHandler) CreateLocationHandler(c *gin.Context) {
 		h.logger.Error("create location error", zap.Error(err))
 		return
 	}
-	zones, err := h.service.GetDangerZones(c.Request.Context(), &dt, userID)
+	zones, err := h.service.GetDangerZones(c.Request.Context(), &dt)
 	if err != nil {
 		h.logger.Error("get danger zones error", zap.Error(err))
 		return

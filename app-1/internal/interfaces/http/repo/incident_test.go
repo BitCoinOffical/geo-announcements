@@ -68,7 +68,7 @@ func TestGetIncidents(t *testing.T) {
 	defer db.Close()
 
 	repo := repo.NewIncidentRepo(db)
-	q := `SELECT * FROM incidents WHERE status = 'public' ORDER BY incident_id ASC LIMIT $1 OFFSET $2;`
+	q := `SELECT * FROM incidents WHERE status = 'public' ORDER BY incident_id ASC LIMIT $1 OFFSET $2`
 	tests := []struct {
 		name  string
 		query string
@@ -225,7 +225,7 @@ func TestUpdateZones(t *testing.T) {
 	q := `UPDATE zones SET is_dangerous = TRUE WHERE zone_id = (SELECT z.zone_id FROM zones z WHERE ST_Contains(
 			z.wkb_geometry,
 			ST_SetSRID(ST_MakePoint($1, $2), 4326)
-			) LIMIT 1;`
+			) LIMIT 1)`
 	tests := []struct {
 		name  string
 		query string

@@ -46,8 +46,8 @@ func TestGetDangerZones(t *testing.T) {
 	repo := mock_services.NewMocklocationRepository(ctrl)
 	services := services.NewLocationService(repo)
 	dto := &dto.LocationDTO{}
-	repo.EXPECT().GetDangerZones(gomock.Any(), dto, "id").Return([]models.DangerousZones{}, nil) //имитируем ошибку базы данных
-	zones, err := services.GetDangerZones(t.Context(), dto, "id")
+	repo.EXPECT().GetDangerZones(gomock.Any(), dto).Return([]models.DangerousZones{}, nil) //имитируем ошибку базы данных
+	zones, err := services.GetDangerZones(t.Context(), dto)
 
 	assert.Len(t, zones, 0)
 	assert.NoError(t, err)
@@ -59,8 +59,8 @@ func TestGetDangerZones_Error(t *testing.T) {
 	repo := mock_services.NewMocklocationRepository(ctrl)
 	services := services.NewLocationService(repo)
 	dto := &dto.LocationDTO{}
-	repo.EXPECT().GetDangerZones(gomock.Any(), dto, "id").Return(nil, errors.New("db is down")) //имитируем ошибку базы данных
-	_, err := services.GetDangerZones(t.Context(), dto, "id")
+	repo.EXPECT().GetDangerZones(gomock.Any(), dto).Return(nil, errors.New("db is down")) //имитируем ошибку базы данных
+	_, err := services.GetDangerZones(t.Context(), dto)
 
 	assert.Error(t, err)
 

@@ -24,8 +24,8 @@ func (h *LocationService) CreateLocation(ctx context.Context, dto *dto.LocationD
 	return nil
 }
 
-func (h *LocationService) GetDangerZones(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
-	zones, err := h.repo.GetDangerZones(ctx, dto, userID)
+func (h *LocationService) GetDangerZones(ctx context.Context, dto *dto.LocationDTO) ([]models.DangerousZones, error) {
+	zones, err := h.repo.GetDangerZones(ctx, dto)
 	if err != nil {
 		return nil, err
 	}

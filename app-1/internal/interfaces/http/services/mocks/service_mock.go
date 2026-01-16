@@ -309,16 +309,16 @@ func (mr *MocklocationRepositoryMockRecorder) CreateLocation(ctx, arg1, userID a
 }
 
 // GetDangerZones mocks base method.
-func (m *MocklocationRepository) GetDangerZones(ctx context.Context, arg1 *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
+func (m *MocklocationRepository) GetDangerZones(ctx context.Context, arg1 *dto.LocationDTO) ([]models.DangerousZones, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDangerZones", ctx, arg1, userID)
+	ret := m.ctrl.Call(m, "GetDangerZones", ctx, arg1)
 	ret0, _ := ret[0].([]models.DangerousZones)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetDangerZones indicates an expected call of GetDangerZones.
-func (mr *MocklocationRepositoryMockRecorder) GetDangerZones(ctx, arg1, userID any) *gomock.Call {
+func (mr *MocklocationRepositoryMockRecorder) GetDangerZones(ctx, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDangerZones", reflect.TypeOf((*MocklocationRepository)(nil).GetDangerZones), ctx, arg1, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDangerZones", reflect.TypeOf((*MocklocationRepository)(nil).GetDangerZones), ctx, arg1)
 }

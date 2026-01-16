@@ -21,7 +21,12 @@ func TestCreateLocation(t *testing.T) {
 	defer db.Close()
 
 	repo := repo.NewLocationRepo(db)
-	q := `INSERT INTO locations (user_id, lat, lon ) VALUES ($1, $2, $3)`
+	q := `
+	    INSERT INTO user_checks_loс (user_id, lat, lon, zone_id)
+		SELECT $1, $2, $3, z.zone_id
+		FROM zones z
+		WHERE ST_Within(ST_SetSRID(ST_Point($3, $2), 4326), z.wkb_geometry)
+		LIMIT 1;`
 	tests := []struct {
 		name  string
 		query string
@@ -57,7 +62,7 @@ func TestGetDangerZones(t *testing.T) {
 	defer db.Close()
 
 	repo := repo.NewLocationRepo(db)
-	q := `SELECT z.zone_id, z.lat, z.lon,
+	q := `	SELECT z.zone_id, z.lat, z.lon,
 		ST_Distance(
 			z.wkb_geometry,
 			ST_SetSRID(ST_Point($1, $2), 4326)
@@ -80,12 +85,12 @@ func TestGetDangerZones(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mock.ExpectQuery(regexp.QuoteMeta(tt.query)).WithArgs(userid, dto.Lat, dto.Lon).WillReturnError(tt.err).WillReturnRows(sqlmock.NewRows([]string{
+			mock.ExpectQuery(regexp.QuoteMeta(tt.query)).WithArgs(dto.Lat, dto.Lon).WillReturnError(tt.err).WillReturnRows(sqlmock.NewRows([]string{
 				"zone_id",
 				"lat",
 				"lon",
 				"distant"}))
-			rows, err := repo.GetDangerZones(t.Context(), dto, userid)
+			rows, err := repo.GetDangerZones(t.Context(), dto)
 			if tt.ok {
 				assert.NoError(t, err)
 			} else {

@@ -30,7 +30,7 @@ type incidentCache interface {
 
 type locationRepository interface {
 	CreateLocation(ctx context.Context, dto *dto.LocationDTO, userID string) error
-	GetDangerZones(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error)
+	GetDangerZones(ctx context.Context, dto *dto.LocationDTO) ([]models.DangerousZones, error)
 }
 
 type Service struct {
