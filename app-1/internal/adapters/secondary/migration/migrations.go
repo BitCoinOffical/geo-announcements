@@ -8,10 +8,6 @@ import (
 	"github.com/pressly/goose/v3"
 )
 
-const (
-	attempts = 5
-)
-
 func RunMigrations(db *sql.DB, migrationsDir string) {
 
 	time.Sleep(5 * time.Second)
