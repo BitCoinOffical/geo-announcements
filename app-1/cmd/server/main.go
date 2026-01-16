@@ -21,6 +21,7 @@ const (
 	migrationsDir = "./migrations"
 )
 
+// основной сервис
 func main() {
 	cfg, err := config.NewLoadConfig()
 	if err != nil {

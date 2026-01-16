@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// сервер заглушка куда отправляются webhooks
 func main() {
 	r := gin.Default()
 

@@ -20,6 +20,7 @@ const (
 	Prod = "Prod"
 )
 
+// отдельный сервис воркеров которые ассинхронно отправляют webhooks
 func main() {
 	cfg, err := config.NewLoadConfig()
 	if err != nil {
