@@ -1,21 +1,19 @@
 package handlers
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
 type SystemHandler struct {
 	logger *zap.Logger
-	DB     *sql.DB
-	RDB    *redis.Client
+	DB     DBPinger
+	RDB    RedisPinger
 }
 
-func NewSystemHandler(db *sql.DB, rdb *redis.Client, logger *zap.Logger) *SystemHandler {
+func NewSystemHandler(db DBPinger, rdb RedisPinger, logger *zap.Logger) *SystemHandler {
 	return &SystemHandler{DB: db, RDB: rdb, logger: logger}
 }
 
@@ -39,7 +37,7 @@ func (h *SystemHandler) GetSystemHealth(c *gin.Context) {
 		zap.Int("status", status),
 	)
 
-	c.JSON(http.StatusServiceUnavailable, gin.H{
+	c.JSON(status, gin.H{
 		"postgres": postg,
 		"redis":    redis,
 		"status":   status,

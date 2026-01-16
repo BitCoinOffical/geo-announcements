@@ -8,8 +8,6 @@ import (
 	"github.com/BitCoinOffical/geo-announcements/app-1/config"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/api/response"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/queue"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/retry"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -24,11 +22,11 @@ type LocationHandler struct {
 	cfg     *config.AppConfig
 	logger  *zap.Logger
 	service locationService
-	queue   *queue.WebHookQueue
+	retry   webhookRetry
 }
 
-func NewLocationHandler(service locationService, queue *queue.WebHookQueue, logger *zap.Logger, cfg *config.AppConfig) *LocationHandler {
-	return &LocationHandler{service: service, queue: queue, logger: logger, cfg: cfg}
+func NewLocationHandler(service locationService, logger *zap.Logger, cfg *config.AppConfig, retry webhookRetry) *LocationHandler {
+	return &LocationHandler{service: service, logger: logger, cfg: cfg, retry: retry}
 }
 
 func (h *LocationHandler) CreateLocationHandler(c *gin.Context) {
@@ -50,11 +48,17 @@ func (h *LocationHandler) CreateLocationHandler(c *gin.Context) {
 		return
 	}
 
-	zones, err := h.service.CreateLocation(c.Request.Context(), &dt, userID)
+	err := h.service.CreateLocation(c.Request.Context(), &dt, userID)
 	if err != nil {
 		h.logger.Error("create location error", zap.Error(err))
 		return
 	}
+	zones, err := h.service.GetDangerZones(c.Request.Context(), &dt, userID)
+	if err != nil {
+		h.logger.Error("get danger zones error", zap.Error(err))
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"success": true, "dunger zones": zones})
 
 	go func() {
@@ -66,7 +70,7 @@ func (h *LocationHandler) CreateLocationHandler(c *gin.Context) {
 			Payload:    dt,
 			RetryCount: 0,
 		}
-		retry.Retry(ctx, &webhook, h.logger, h.queue, h.cfg)
+		h.retry.Retry(ctx, &webhook)
 
 	}()
 

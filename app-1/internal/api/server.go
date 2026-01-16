@@ -3,47 +3,38 @@ package api
 import (
 	"net/http"
 
+	"github.com/BitCoinOffical/geo-announcements/app-1/config"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/api/handlers"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/api/middleware"
 	"github.com/gin-gonic/gin"
 )
 
 type Server struct {
-	h         *handlers.IncidentHandler
-	sh        *handlers.SystemHandler
-	loc       *handlers.LocationHandler
-	appApiKey string
-	engine    *gin.Engine
+	engine *gin.Engine
+	h      *handlers.Handlers
 }
 
-func NewServer() *Server {
-	engine := gin.New()
-	return &Server{engine: engine}
+func NewServer(h *handlers.Handlers) *Server {
+	return &Server{h: h, engine: gin.New()}
 }
 
-func (s *Server) RegisterRoutes(h *handlers.IncidentHandler, sh *handlers.SystemHandler, loc *handlers.LocationHandler, appApiKey string) *Server {
-	return &Server{h: h, sh: sh, loc: loc, appApiKey: appApiKey}
-}
-
-func (s *Server) Routes() {
+func (s *Server) Run(cfg *config.Config) error {
 
 	s.engine.GET("/", func(ctx *gin.Context) {
 		ctx.Redirect(http.StatusMovedPermanently, "/api/v1")
 	})
 
+	appApiKey := cfg.App.ApiKey
 	rout := s.engine.Group("/api/v1")
 	{
-		rout.GET("/incidents/", middleware.CheckApiKey(s.appApiKey), s.h.GetIncidentsHandler)
-		rout.GET("/incidents", middleware.CheckApiKey(s.appApiKey), s.h.GetIncidentByIDHandler)
-		rout.POST("/incidents", middleware.CheckApiKey(s.appApiKey), s.h.CreateIncidentsHandler)
-		rout.PUT("/incidents", middleware.CheckApiKey(s.appApiKey), s.h.UpdateIncidentsByIDHandler)
-		rout.DELETE("/incidents", middleware.CheckApiKey(s.appApiKey), s.h.DeleteIncidentsByIDHandler)
-		rout.GET("/incidents/stats", middleware.CheckApiKey(s.appApiKey), s.h.GetIncidentStatHandler)
-		rout.GET("/system/health", middleware.CheckApiKey(s.appApiKey), s.sh.GetSystemHealth)
-		rout.POST("/location/check", s.loc.CreateLocationHandler)
+		rout.GET("/incidents/", middleware.CheckApiKey(appApiKey), s.h.Incident.GetIncidentsHandler)
+		rout.GET("/incidents", middleware.CheckApiKey(appApiKey), s.h.Incident.GetIncidentByIDHandler)
+		rout.POST("/incidents", middleware.CheckApiKey(appApiKey), s.h.Incident.CreateIncidentsHandler)
+		rout.PUT("/incidents", middleware.CheckApiKey(appApiKey), s.h.Incident.UpdateIncidentsByIDHandler)
+		rout.DELETE("/incidents", middleware.CheckApiKey(appApiKey), s.h.Incident.DeleteIncidentsByIDHandler)
+		rout.GET("/incidents/stats", middleware.CheckApiKey(appApiKey), s.h.Incident.GetIncidentStatHandler)
+		rout.GET("/system/health", middleware.CheckApiKey(appApiKey), s.h.System.GetSystemHealth)
+		rout.POST("/location/check", s.h.Location.CreateLocationHandler)
 	}
-
-}
-func (s *Server) Run(addr string) error {
-	return s.engine.Run(addr)
+	return s.engine.Run()
 }

@@ -16,10 +16,18 @@ func NewLocationService(repo locationRepository) *LocationService {
 	return &LocationService{repo: repo}
 }
 
-func (h *LocationService) CreateLocation(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
-	zones, err := h.repo.CreateLocation(ctx, dto, userID)
+func (h *LocationService) CreateLocation(ctx context.Context, dto *dto.LocationDTO, userID string) error {
+	err := h.repo.CreateLocation(ctx, dto, userID)
 	if err != nil {
-		return nil, fmt.Errorf("repo.CreateLocationRepo: %w", err)
+		return fmt.Errorf("repo.CreateLocationRepo: %w", err)
+	}
+	return nil
+}
+
+func (h *LocationService) GetDangerZones(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
+	zones, err := h.repo.GetDangerZones(ctx, dto, userID)
+	if err != nil {
+		return nil, err
 	}
 	return zones, nil
 }

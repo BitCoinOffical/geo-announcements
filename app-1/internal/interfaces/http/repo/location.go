@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/models"
@@ -18,44 +17,33 @@ func NewLocationRepo(db *sql.DB) *LocationRepo {
 	return &LocationRepo{db: db}
 }
 
-func (h *LocationRepo) CreateLocation(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
-	tx, err := h.db.BeginTx(ctx, nil)
+func (h *LocationRepo) CreateLocation(ctx context.Context, dto *dto.LocationDTO, userID string) error {
+	query := `INSERT INTO locations (user_id, lat, lon ) VALUES ($1, $2, $3)`
+	res, err := h.db.ExecContext(ctx, query, userID, dto.Lat, dto.Lon)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	defer func() {
-		if err != nil {
-			if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
-				log.Printf("tx rollback error: %v", err)
-			}
-		}
-	}()
-	row, err := tx.ExecContext(ctx, `
-	    INSERT INTO user_checks_loс (user_id, lat, lon, zone_id)
-		SELECT $1, $2, $3, z.zone_id
-		FROM zones z
-		WHERE ST_Within(ST_SetSRID(ST_MakePoint($3, $2), 4326), z.wkb_geometry)
-		LIMIT 1;`, userID, dto.Lat, dto.Lon)
+	row, err := res.RowsAffected()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	rowsAffected, err := row.RowsAffected()
-	if err != nil {
-		return nil, err
+	if row == 0 {
+		return errors.New("failed create location")
 	}
-	if rowsAffected == 0 {
-		return nil, errors.New("point does not belong to any zone")
-	}
-	rows, err := tx.QueryContext(ctx, `
+	return nil
+
+}
+
+func (h *LocationRepo) GetDangerZones(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
+	query := `
 	SELECT z.zone_id, z.lat, z.lon,
 		ST_Distance(
 			z.wkb_geometry,
 			ST_SetSRID(ST_Point($1, $2), 4326)
-		) AS distance
-		FROM zones z
+		) AS distanc FROM zones z
 		WHERE z.is_dangerous = TRUE
-		ORDER BY z.wkb_geometry <-> ST_SetSRID(ST_Point($1, $2), 4326)
-		LIMIT 5;`, dto.Lon, dto.Lat)
+		ORDER BY z.wkb_geometry <-> ST_SetSRID(ST_Point($1, $2), 4326) LIMIT 5;`
+	rows, err := h.db.QueryContext(ctx, query, userID, dto.Lat, dto.Lon)
 	if err != nil {
 		return nil, err
 	}
@@ -73,5 +61,5 @@ func (h *LocationRepo) CreateLocation(ctx context.Context, dto *dto.LocationDTO,
 		zones = append(zones, zone)
 	}
 
-	return zones, tx.Commit()
+	return zones, nil
 }

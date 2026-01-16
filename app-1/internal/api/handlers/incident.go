@@ -59,7 +59,7 @@ func (h *IncidentHandler) GetIncidentByIDHandler(c *gin.Context) {
 
 func (h *IncidentHandler) GetIncidentStatHandler(c *gin.Context) {
 
-	users, err := h.service.GetIncidentStat(c.Request.Context(), h.cfg)
+	users, err := h.service.GetIncidentStat(c.Request.Context(), h.cfg.StatsTimeWindowMinutes)
 	if err != nil {
 		response.InternalServerError(c, err, "failed to get incidents stat", h.logger)
 		return
@@ -78,6 +78,12 @@ func (h *IncidentHandler) CreateIncidentsHandler(c *gin.Context) {
 		response.InternalServerError(c, err, "failed to create incident", h.logger)
 		return
 	}
+
+	if err := h.service.UpdateZones(c.Request.Context(), &dto); err != nil {
+		response.InternalServerError(c, err, "failed to update zone", h.logger)
+		return
+	}
+
 	c.Status(http.StatusOK)
 }
 

@@ -7,15 +7,15 @@
 //
 
 // Package mock_handlers is a generated GoMock package.
-package mocks
+package mock_handlers
 
 import (
 	context "context"
 	reflect "reflect"
 
-	config "github.com/BitCoinOffical/geo-announcements/app-1/config"
 	dto "github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
 	models "github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/models"
+	redis "github.com/redis/go-redis/v9"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -87,18 +87,18 @@ func (mr *MockincidentServiceMockRecorder) GetIncidentByID(ctx, id any) *gomock.
 }
 
 // GetIncidentStat mocks base method.
-func (m *MockincidentService) GetIncidentStat(ctx context.Context, cfg *config.AppConfig) (*models.UsersInDangerousZones, error) {
+func (m *MockincidentService) GetIncidentStat(ctx context.Context, StatsTimeWindowMinutes int) (*models.UsersInDangerousZones, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIncidentStat", ctx, cfg)
+	ret := m.ctrl.Call(m, "GetIncidentStat", ctx, StatsTimeWindowMinutes)
 	ret0, _ := ret[0].(*models.UsersInDangerousZones)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetIncidentStat indicates an expected call of GetIncidentStat.
-func (mr *MockincidentServiceMockRecorder) GetIncidentStat(ctx, cfg any) *gomock.Call {
+func (mr *MockincidentServiceMockRecorder) GetIncidentStat(ctx, StatsTimeWindowMinutes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIncidentStat", reflect.TypeOf((*MockincidentService)(nil).GetIncidentStat), ctx, cfg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIncidentStat", reflect.TypeOf((*MockincidentService)(nil).GetIncidentStat), ctx, StatsTimeWindowMinutes)
 }
 
 // GetIncidents mocks base method.
@@ -130,6 +130,20 @@ func (mr *MockincidentServiceMockRecorder) UpdateIncidentsByID(ctx, arg1, id any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateIncidentsByID", reflect.TypeOf((*MockincidentService)(nil).UpdateIncidentsByID), ctx, arg1, id)
 }
 
+// UpdateZones mocks base method.
+func (m *MockincidentService) UpdateZones(ctx context.Context, arg1 *dto.IncidentDTO) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateZones", ctx, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateZones indicates an expected call of UpdateZones.
+func (mr *MockincidentServiceMockRecorder) UpdateZones(ctx, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateZones", reflect.TypeOf((*MockincidentService)(nil).UpdateZones), ctx, arg1)
+}
+
 // MocklocationService is a mock of locationService interface.
 type MocklocationService struct {
 	ctrl     *gomock.Controller
@@ -155,16 +169,142 @@ func (m *MocklocationService) EXPECT() *MocklocationServiceMockRecorder {
 }
 
 // CreateLocation mocks base method.
-func (m *MocklocationService) CreateLocation(ctx context.Context, arg1 *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
+func (m *MocklocationService) CreateLocation(ctx context.Context, arg1 *dto.LocationDTO, userID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateLocation", ctx, arg1, userID)
-	ret0, _ := ret[0].([]models.DangerousZones)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // CreateLocation indicates an expected call of CreateLocation.
 func (mr *MocklocationServiceMockRecorder) CreateLocation(ctx, arg1, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLocation", reflect.TypeOf((*MocklocationService)(nil).CreateLocation), ctx, arg1, userID)
+}
+
+// GetDangerZones mocks base method.
+func (m *MocklocationService) GetDangerZones(ctx context.Context, arg1 *dto.LocationDTO, userID string) ([]models.DangerousZones, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDangerZones", ctx, arg1, userID)
+	ret0, _ := ret[0].([]models.DangerousZones)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDangerZones indicates an expected call of GetDangerZones.
+func (mr *MocklocationServiceMockRecorder) GetDangerZones(ctx, arg1, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDangerZones", reflect.TypeOf((*MocklocationService)(nil).GetDangerZones), ctx, arg1, userID)
+}
+
+// MockwebhookRetry is a mock of webhookRetry interface.
+type MockwebhookRetry struct {
+	ctrl     *gomock.Controller
+	recorder *MockwebhookRetryMockRecorder
+	isgomock struct{}
+}
+
+// MockwebhookRetryMockRecorder is the mock recorder for MockwebhookRetry.
+type MockwebhookRetryMockRecorder struct {
+	mock *MockwebhookRetry
+}
+
+// NewMockwebhookRetry creates a new mock instance.
+func NewMockwebhookRetry(ctrl *gomock.Controller) *MockwebhookRetry {
+	mock := &MockwebhookRetry{ctrl: ctrl}
+	mock.recorder = &MockwebhookRetryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwebhookRetry) EXPECT() *MockwebhookRetryMockRecorder {
+	return m.recorder
+}
+
+// Retry mocks base method.
+func (m *MockwebhookRetry) Retry(ctx context.Context, webhook *dto.WebHookDTO) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Retry", ctx, webhook)
+}
+
+// Retry indicates an expected call of Retry.
+func (mr *MockwebhookRetryMockRecorder) Retry(ctx, webhook any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Retry", reflect.TypeOf((*MockwebhookRetry)(nil).Retry), ctx, webhook)
+}
+
+// MockDBPinger is a mock of DBPinger interface.
+type MockDBPinger struct {
+	ctrl     *gomock.Controller
+	recorder *MockDBPingerMockRecorder
+	isgomock struct{}
+}
+
+// MockDBPingerMockRecorder is the mock recorder for MockDBPinger.
+type MockDBPingerMockRecorder struct {
+	mock *MockDBPinger
+}
+
+// NewMockDBPinger creates a new mock instance.
+func NewMockDBPinger(ctrl *gomock.Controller) *MockDBPinger {
+	mock := &MockDBPinger{ctrl: ctrl}
+	mock.recorder = &MockDBPingerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDBPinger) EXPECT() *MockDBPingerMockRecorder {
+	return m.recorder
+}
+
+// Ping mocks base method.
+func (m *MockDBPinger) Ping() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ping")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Ping indicates an expected call of Ping.
+func (mr *MockDBPingerMockRecorder) Ping() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockDBPinger)(nil).Ping))
+}
+
+// MockRedisPinger is a mock of RedisPinger interface.
+type MockRedisPinger struct {
+	ctrl     *gomock.Controller
+	recorder *MockRedisPingerMockRecorder
+	isgomock struct{}
+}
+
+// MockRedisPingerMockRecorder is the mock recorder for MockRedisPinger.
+type MockRedisPingerMockRecorder struct {
+	mock *MockRedisPinger
+}
+
+// NewMockRedisPinger creates a new mock instance.
+func NewMockRedisPinger(ctrl *gomock.Controller) *MockRedisPinger {
+	mock := &MockRedisPinger{ctrl: ctrl}
+	mock.recorder = &MockRedisPingerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockRedisPinger) EXPECT() *MockRedisPingerMockRecorder {
+	return m.recorder
+}
+
+// Ping mocks base method.
+func (m *MockRedisPinger) Ping(ctx context.Context) *redis.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ping", ctx)
+	ret0, _ := ret[0].(*redis.StatusCmd)
+	return ret0
+}
+
+// Ping indicates an expected call of Ping.
+func (mr *MockRedisPingerMockRecorder) Ping(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockRedisPinger)(nil).Ping), ctx)
 }

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
@@ -111,50 +110,31 @@ func (h *IncidentRepo) GetIncidentStat(ctx context.Context, fromTime *time.Time)
 }
 
 func (h *IncidentRepo) CreateIncidents(ctx context.Context, dto *dto.IncidentDTO) error {
-	tx, err := h.db.BeginTx(ctx, nil)
+	query := `INSERT INTO incidents (lat, lon) VALUES ($1, $2)`
+	res, err := h.db.ExecContext(ctx, query, dto.Lat, dto.Lon)
 	if err != nil {
-		return fmt.Errorf("db.BeginTx: %w", err)
+		return err
 	}
-	defer func() {
-		if err != nil {
-			if err := tx.Rollback(); err != nil && err != sql.ErrTxDone {
-				log.Printf("tx rollback error: %v", err)
-			}
-		}
-	}()
+	row, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if row == 0 {
+		return errors.New("failed create incident")
+	}
+	return nil
+}
 
-	_, err = tx.ExecContext(
-		ctx,
-		`INSERT INTO incidents (lat, lon) VALUES ($1, $2)`,
-		dto.Lat,
-		dto.Lon,
-	)
+func (h *IncidentRepo) UpdateZones(ctx context.Context, dto *dto.IncidentDTO) error {
+	queue := `UPDATE zones SET is_dangerous = TRUE WHERE zone_id = (SELECT z.zone_id FROM zones z WHERE ST_Contains(
+			z.wkb_geometry,
+			ST_SetSRID(ST_MakePoint($1, $2), 4326)
+			) LIMIT 1;`
+	_, err := h.db.ExecContext(ctx, queue, dto.Lat, dto.Lon)
 	if err != nil {
-		return fmt.Errorf("tx.ExecContext: %w", err)
+		return fmt.Errorf("db.ExecContext: %w", err)
 	}
-	_, err = tx.ExecContext(
-		ctx,
-		`
-		UPDATE zones
-		SET is_dangerous = TRUE
-		WHERE zone_id = (
-			SELECT z.zone_id
-			FROM zones z
-			WHERE ST_Contains(
-				z.wkb_geometry,
-				ST_SetSRID(ST_Point($1, $2), 4326)
-			)
-			LIMIT 1
-		)
-		`,
-		dto.Lon,
-		dto.Lat,
-	)
-	if err != nil {
-		return fmt.Errorf("tx.ExecContext: %w", err)
-	}
-
-	return tx.Commit()
+	return nil
 }
 
 func (h *IncidentRepo) UpdateIncidentsByID(ctx context.Context, dto *dto.IncidentDTO, id int) error {

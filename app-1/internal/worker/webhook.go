@@ -21,10 +21,11 @@ type WebhookWorker struct {
 	queue  *queue.WebHookQueue
 	logger *zap.Logger
 	rdb    *redis.Client
+	retry  *retry.Retry
 }
 
-func NewWebhookWorker(rdb *redis.Client, logger *zap.Logger, cfg *config.AppConfig, queue *queue.WebHookQueue) *WebhookWorker {
-	return &WebhookWorker{rdb: rdb, logger: logger, cfg: cfg, queue: queue}
+func NewWebhookWorker(rdb *redis.Client, logger *zap.Logger, cfg *config.AppConfig, queue *queue.WebHookQueue, retry *retry.Retry) *WebhookWorker {
+	return &WebhookWorker{rdb: rdb, logger: logger, cfg: cfg, queue: queue, retry: retry}
 }
 
 func (w *WebhookWorker) WebhookWorker(ctx context.Context) {
@@ -62,7 +63,7 @@ func (w *WebhookWorker) WebhookWorker(ctx context.Context) {
 					continue
 				}
 
-				retry.Retry(ctx, &webhook, w.logger, w.queue, w.cfg)
+				w.retry.Retry(ctx, &webhook)
 
 			}
 		})

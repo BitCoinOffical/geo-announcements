@@ -10,6 +10,7 @@ import (
 	"github.com/BitCoinOffical/geo-announcements/app-1/config"
 	rdb "github.com/BitCoinOffical/geo-announcements/app-1/internal/adapters/secondary/redis"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/queue"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/retry"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/worker"
 	"go.uber.org/zap"
 )
@@ -42,8 +43,9 @@ func main() {
 
 	rdb := rdb.NewWebhookRedis(&cfg.Redis)
 	queue := queue.NewWebHookQueue(rdb)
+	retry := retry.NewRetry(logger, queue, &cfg.App)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	w := worker.NewWebhookWorker(rdb, logger, &cfg.App, queue)
+	w := worker.NewWebhookWorker(rdb, logger, &cfg.App, queue, retry)
 	w.WebhookWorker(ctx)
 }

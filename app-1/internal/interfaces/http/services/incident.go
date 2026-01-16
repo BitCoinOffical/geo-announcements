@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/BitCoinOffical/geo-announcements/app-1/config"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/models"
 	"go.uber.org/zap"
@@ -109,8 +108,8 @@ func (h *IncidentService) GetIncidentByID(ctx context.Context, id int) (*models.
 	return row, nil
 }
 
-func (h *IncidentService) GetIncidentStat(ctx context.Context, cfg *config.AppConfig) (*models.UsersInDangerousZones, error) {
-	fromTime := time.Now().Add(-time.Duration(cfg.StatsTimeWindowMinutes) * time.Minute)
+func (h *IncidentService) GetIncidentStat(ctx context.Context, StatsTimeWindowMinutes int) (*models.UsersInDangerousZones, error) {
+	fromTime := time.Now().Add(-time.Duration(StatsTimeWindowMinutes) * time.Minute)
 	users, err := h.incidentRepo.GetIncidentStat(ctx, &fromTime)
 	if err != nil {
 		return nil, fmt.Errorf("incidentRepo.GetIncidentStatRepo: %w", err)
@@ -121,6 +120,13 @@ func (h *IncidentService) GetIncidentStat(ctx context.Context, cfg *config.AppCo
 func (h *IncidentService) CreateIncidents(ctx context.Context, dto *dto.IncidentDTO) error {
 	if err := h.incidentRepo.CreateIncidents(ctx, dto); err != nil {
 		return fmt.Errorf("incidentRepo.CreateIncidentsRepo: %w", err)
+	}
+	return nil
+}
+
+func (h *IncidentService) UpdateZones(ctx context.Context, dto *dto.IncidentDTO) error {
+	if err := h.incidentRepo.UpdateZones(ctx, dto); err != nil {
+		return fmt.Errorf("incidentRepo.UpdateZones: %w", err)
 	}
 	return nil
 }

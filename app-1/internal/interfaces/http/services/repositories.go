@@ -14,6 +14,7 @@ type incidentRepository interface {
 	GetIncidentByID(ctx context.Context, id int) (*models.Incident, error)
 	GetIncidentStat(ctx context.Context, fromTime *time.Time) (*models.UsersInDangerousZones, error)
 	CreateIncidents(ctx context.Context, dto *dto.IncidentDTO) error
+	UpdateZones(ctx context.Context, dto *dto.IncidentDTO) error
 	UpdateIncidentsByID(ctx context.Context, dto *dto.IncidentDTO, id int) error
 	DeleteIncidentsByID(ctx context.Context, id int) error
 }
@@ -28,7 +29,8 @@ type incidentCache interface {
 }
 
 type locationRepository interface {
-	CreateLocation(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error)
+	CreateLocation(ctx context.Context, dto *dto.LocationDTO, userID string) error
+	GetDangerZones(ctx context.Context, dto *dto.LocationDTO, userID string) ([]models.DangerousZones, error)
 }
 
 type Service struct {

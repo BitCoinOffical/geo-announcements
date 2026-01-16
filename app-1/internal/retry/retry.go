@@ -14,18 +14,29 @@ const (
 	maxAttempts = 5
 )
 
-func Retry(ctx context.Context, webhook *dto.WebHookDTO, logger *zap.Logger, queue *queue.WebHookQueue, cfg *config.AppConfig) {
+type Retry struct {
+	logger *zap.Logger
+	queue  *queue.WebHookQueue
+	cfg    *config.AppConfig
+}
+
+func NewRetry(logger *zap.Logger, queue *queue.WebHookQueue, cfg *config.AppConfig) *Retry {
+	return &Retry{logger: logger, queue: queue, cfg: cfg}
+
+}
+
+func (r *Retry) Retry(ctx context.Context, webhook *dto.WebHookDTO) {
 	for i := range maxAttempts {
 		if i == maxAttempts {
-			logger.Error("exceeded the number of attempts")
+			r.logger.Error("exceeded the number of attempts")
 			break
 		}
 
-		err := queue.EnqueueWebHook(ctx, webhook, cfg.QueueKey)
+		err := r.queue.EnqueueWebHook(ctx, webhook, r.cfg.QueueKey)
 		if err == nil {
 			return
 		}
-		logger.Error("enqueue webhook error", zap.Error(err))
+		r.logger.Error("enqueue webhook error", zap.Error(err))
 		select {
 		case <-ctx.Done():
 			return

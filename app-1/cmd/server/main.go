@@ -10,10 +10,6 @@ import (
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/api"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/api/handlers"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/domain/rules"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/cache"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/queue"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/repo"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/services"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
@@ -69,15 +65,11 @@ func main() {
 	cacheRdb := redis.NewRedis(&cfg.Redis)
 	queueRdb := redis.NewWebhookRedis(&cfg.Redis)
 
-	service := services.NewRepos(repo.NewIncidentRepo(db), repo.NewLocationRepo(db), cache.NewIncidentCache(cacheRdb))
-	handl := handlers.NewServices(services.NewIncidentService(service.IncidentRepo, service.IncidentCache, logger), services.NewLocationService(service.LocationRepo))
-
-	h := handlers.NewIncidentHandler(handl.Incident, logger, &cfg.App)
-	sh := handlers.NewSystemHandler(db, cacheRdb, logger)
-	loc := handlers.NewLocationHandler(handl.Location, queue.NewWebHookQueue(queueRdb), logger, &cfg.App)
-
-	server := api.NewServer()
-	server.Run(":8080")
-	server.RegisterRoutes(h, sh, loc, cfg.App.ApiKey).Routes()
-
+	services := handlers.NewServices(db, queueRdb, cacheRdb, logger, cfg)
+	hanlrs := handlers.NewHandlers(services, db, cacheRdb, logger, cfg)
+	serv := api.NewServer(hanlrs)
+	err = serv.Run(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
