@@ -3,115 +3,155 @@ package services
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
-	"strconv"
 	"time"
 
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/cache"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
 	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/models"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/repo"
+	"go.uber.org/zap"
+)
+
+const (
+	topLimit       = 100
+	maxPage        = 10
+	defaultPageTTL = 30
+	defaultByIdTTL = 5
 )
 
 type IncidentService struct {
-	incidentRepo *repo.IncidentRepo
-	cache        *cache.IncidentCache
+	logger       *zap.Logger
+	incidentRepo incidentRepository
+	cache        incidentCache
 }
 
-func NewIncidentService(incidentRepo *repo.IncidentRepo, cache *cache.IncidentCache) *IncidentService {
-	return &IncidentService{incidentRepo: incidentRepo, cache: cache}
+func NewIncidentService(incidentRepo incidentRepository, cache incidentCache, logger *zap.Logger) *IncidentService {
+	return &IncidentService{incidentRepo: incidentRepo, cache: cache, logger: logger}
 }
 
-func (h *IncidentService) GetIncidentsService(ctx context.Context, page, limit int) ([]models.Incident, error) {
+func (h *IncidentService) GetIncidents(ctx context.Context, page, limit int) ([]models.Incident, error) {
 	offset := (page - 1) * limit
+	if page <= maxPage {
+		all, err := h.cache.GetTop(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("cache.GetTop: %w", err)
+		}
+		if len(all) > 0 {
+			start := (page - 1) * limit
+			if start >= len(all) {
+				return nil, nil
+			}
 
-	key := fmt.Sprintf("incident-page%d:-limit:%d-offset:%d", page, limit, offset)
-	rows, err := h.cache.GetAll(ctx, key)
-	if err != nil {
-		return nil, err
-	}
-	if rows != nil {
-		log.Println("получено с редис")
+			end := start + limit
+			if end > len(all) {
+				end = len(all)
+			}
+
+			h.logger.Debug("received from top redis", zap.String("source", "redis"))
+			return all[start:end], nil
+		}
+
+		rows, err := h.incidentRepo.GetTop(ctx, topLimit)
+		if err != nil {
+			return nil, fmt.Errorf("incidentRepo.GetTopRepo: %w", err)
+		}
+
+		if err := h.cache.SetTop(ctx, rows, time.Minute); err != nil {
+			return nil, fmt.Errorf("cache.SetTop: %w", err)
+		}
+
+		h.logger.Debug("received from top postgres and save top redis", zap.String("source", "postgres"))
 		return rows, nil
 	}
 
-	rows, err = h.incidentRepo.GetIncidentsRepo(ctx, limit, offset)
+	rows, err := h.cache.GetAll(ctx, page, limit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cache.GetAll: %w", err)
 	}
 
-	if err := h.cache.Set(ctx, key, rows, 30*time.Second); err != nil {
-		return nil, err
+	if rows != nil {
+		h.logger.Debug("received from redis", zap.String("source", "redis"))
+		return rows, nil
 	}
-	log.Println("save с редис")
-	return rows, err
+
+	rows, err = h.incidentRepo.GetIncidents(ctx, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("incidentRepo.GetIncidentsRepo: %w", err)
+	}
+
+	if err := h.cache.Set(ctx, fmt.Sprintf("incident-page%d:-limit:%d", page, limit), rows, defaultPageTTL*time.Second); err != nil {
+		return nil, fmt.Errorf("cache.Set: %w", err)
+	}
+
+	h.logger.Debug("received from postgres and saved in redis", zap.String("source", "postgres"))
+	return rows, nil
 }
 
-func (h *IncidentService) GetIncidentByIDService(ctx context.Context, id int) (*models.Incident, error) {
-	key := fmt.Sprintf("incident:%d", id)
-	row, err := h.cache.Get(ctx, key)
+func (h *IncidentService) GetIncidentByID(ctx context.Context, id int) (*models.Incident, error) {
+	row, err := h.cache.Get(ctx, id)
 	if err != nil {
-
-		return nil, err
+		return nil, fmt.Errorf("cache.Get %w", err)
 	}
 	if row != nil {
-		log.Println("получено с редис", row)
+		h.logger.Debug("received from redis", zap.String("source", "redis"))
 		return row, nil
 	}
 
-	row, err = h.incidentRepo.GetIncidentByIDRepo(ctx, id)
+	row, err = h.incidentRepo.GetIncidentByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("incidentRepo.GetIncidentByIDRepo %w", err)
 	}
 
-	if err := h.cache.Set(ctx, key, row, 5*time.Minute); err != nil {
-		return nil, err
+	if err := h.cache.Set(ctx, fmt.Sprintf("incident:%d", id), row, defaultByIdTTL*time.Minute); err != nil {
+		h.logger.Debug("saved in redis")
+		return nil, fmt.Errorf("cache.Set %w", err)
 	}
-	log.Println("save с редис", row)
-
+	h.logger.Debug("received from postgres", zap.String("source", "postgres"))
 	return row, nil
 }
 
-func (h *IncidentService) GetIncidentStatService(ctx context.Context) (*int, error) {
-	windowMinutes, err := strconv.Atoi(os.Getenv("STATS_TIME_WINDOW_MINUTES"))
+func (h *IncidentService) GetIncidentStat(ctx context.Context, StatsTimeWindowMinutes int) (*models.UsersInDangerousZones, error) {
+	fromTime := time.Now().Add(-time.Duration(StatsTimeWindowMinutes) * time.Minute)
+	users, err := h.incidentRepo.GetIncidentStat(ctx, &fromTime)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("incidentRepo.GetIncidentStatRepo: %w", err)
 	}
-	fromTime := time.Now().Add(-time.Duration(windowMinutes) * time.Minute)
-	count, err := h.incidentRepo.GetIncidentStatRepo(ctx, &fromTime)
-	if err != nil {
-		return nil, err
-	}
-	return count, nil
+	return users, nil
 }
 
-func (h *IncidentService) CreateIncidentsService(ctx context.Context, dto *dto.IncidentDTO) error {
-	if err := h.incidentRepo.CreateIncidentsRepo(ctx, dto); err != nil {
-		return err
+func (h *IncidentService) CreateIncidents(ctx context.Context, dto *dto.IncidentDTO) error {
+	if err := h.incidentRepo.CreateIncidents(ctx, dto); err != nil {
+		return fmt.Errorf("incidentRepo.CreateIncidentsRepo: %w", err)
 	}
 	return nil
 }
 
-func (h *IncidentService) UpdateIncidentsByIDService(ctx context.Context, dto *dto.IncidentDTO, id int) error {
-
-	if err := h.incidentRepo.UpdateIncidentsByIDRepo(ctx, dto, id); err != nil {
-		return err
-	}
-	key := fmt.Sprintf("incident:%d", id)
-	if err := h.cache.Del(ctx, key); err != nil {
-		return err
+func (h *IncidentService) UpdateZones(ctx context.Context, dto *dto.IncidentDTO) error {
+	if err := h.incidentRepo.UpdateZones(ctx, dto); err != nil {
+		return fmt.Errorf("incidentRepo.UpdateZones: %w", err)
 	}
 	return nil
 }
 
-func (h *IncidentService) DeleteIncidentsByIDService(ctx context.Context, id int) error {
-	if err := h.incidentRepo.DeleteIncidentsByIDRepo(ctx, id); err != nil {
-		return err
+func (h *IncidentService) UpdateIncidentsByID(ctx context.Context, dto *dto.IncidentDTO, id int) error {
+
+	if err := h.incidentRepo.UpdateIncidentsByID(ctx, dto, id); err != nil {
+		return fmt.Errorf("incidentRepo.UpdateIncidentsByIDRepo: %w", err)
 	}
-	key := fmt.Sprintf("incident:%d", id)
-	if err := h.cache.Del(ctx, key); err != nil {
-		return err
+
+	if err := h.cache.Del(ctx, id); err != nil {
+		return fmt.Errorf("cache.Del: %w", err)
 	}
+
+	return nil
+}
+
+func (h *IncidentService) DeleteIncidentsByID(ctx context.Context, id int) error {
+	if err := h.incidentRepo.DeleteIncidentsByID(ctx, id); err != nil {
+		return fmt.Errorf("incidentRepo.DeleteIncidentsByIDRepo: %w", err)
+	}
+
+	if err := h.cache.Del(ctx, id); err != nil {
+		return fmt.Errorf("cache.Del: %w", err)
+	}
+
 	return nil
 }

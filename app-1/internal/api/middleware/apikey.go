@@ -2,17 +2,21 @@ package middleware
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 )
 
-func CheckApiKey() gin.HandlerFunc {
+const (
+	apiKey  = "X-API-KEY"
+	message = "Invalid API Key"
+)
+
+func CheckApiKey(appApiKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		apiKey := c.Request.Header.Get("X-API-KEY")
-		if apiKey != os.Getenv("API_KEY") {
+		key := c.Request.Header.Get(apiKey)
+		if key != appApiKey {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-				"message": "Invalid API Key",
+				"message": message,
 			})
 			return
 		}

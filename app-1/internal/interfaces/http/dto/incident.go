@@ -1,6 +1,6 @@
 package dto
 
 type IncidentDTO struct {
-	Lat string `json:"lat" binding:"required,lat"`
-	Lon string `json:"lon" binding:"required,lon"`
+	Lat float64 `json:"lat" binding:"required,lat"`
+	Lon float64 `json:"lon" binding:"required,lon"`
 }

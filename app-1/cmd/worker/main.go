@@ -1,86 +1,52 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
-	"net/http"
 	"os"
-	"strconv"
-	"sync"
-	"time"
+	"os/signal"
+	"syscall"
 
+	"github.com/BitCoinOffical/geo-announcements/app-1/config"
 	rdb "github.com/BitCoinOffical/geo-announcements/app-1/internal/adapters/secondary/redis"
-	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/dto"
-	"github.com/joho/godotenv"
-	"github.com/redis/go-redis/v9"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/interfaces/http/queue"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/retry"
+	"github.com/BitCoinOffical/geo-announcements/app-1/internal/worker"
+	"go.uber.org/zap"
 )
 
+const (
+	Dev  = "Dev"
+	Prod = "Prod"
+)
+
+// отдельный сервис воркеров которые ассинхронно отправляют webhooks
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println(err)
-	}
-	workers, err := strconv.Atoi(os.Getenv("WORKERS"))
+	cfg, err := config.NewLoadConfig()
 	if err != nil {
-		workers = 1
-		log.Println(err)
+		log.Fatal(err)
 	}
-	retry, err := strconv.Atoi(os.Getenv("RETRY"))
-	if err != nil {
-		retry = 5
-		log.Println("error:", err)
-	}
-	rdb := rdb.NewWebhookRedis()
-	WebhookWorker(context.Background(), rdb, workers, retry)
-}
-func WebhookWorker(ctx context.Context, rdb *redis.Client, workers int, retry int) {
-	wg := &sync.WaitGroup{}
-	for range workers {
-		wg.Go(func() {
-			for {
-				result, err := rdb.BLPop(ctx, 0, "queue:webhooks").Result()
-				if err != nil {
-					log.Println("BLPop>", err)
-					continue
-				}
-
-				playload := result[1]
-				fmt.Println("playload>>> ", playload)
-				var webhook dto.WebHookDTO
-				if err := json.Unmarshal([]byte(playload), &webhook); err != nil {
-					log.Println("Unmarshal>", err)
-					continue
-				}
-				fmt.Println("webhook>>> ", webhook)
-
-				if err := sendWebhook(&webhook, playload); err == nil {
-					log.Println("webhook sucess: ok")
-					continue
-				}
-				webhook.RetryCount++
-				if webhook.RetryCount > retry {
-					log.Println("send webhook failed")
-					continue
-				}
-
-				time.AfterFunc(5*time.Second, func() {
-					b, err := json.Marshal(webhook)
-					if err != nil {
-						log.Println(err)
-					}
-					rdb.RPush(ctx, "queue:webhooks", b)
-				})
-
-			}
-		})
+	var logger *zap.Logger
+	switch cfg.App.DebugLevel {
+	case Dev:
+		logger, err = zap.NewDevelopment()
+		if err != nil {
+			log.Fatal(err)
+		}
+	case Prod:
+		logger, err = zap.NewProduction()
+		if err != nil {
+			log.Fatal(err)
+		}
+	default:
+		log.Fatal("incorrect debug value")
 	}
 
-	wg.Wait()
-}
-
-func sendWebhook(webhook *dto.WebHookDTO, playload string) error {
-	_, err := http.Post(webhook.URL, "application/json", bytes.NewReader([]byte(playload)))
-	return err
+	rdb := rdb.NewWebhookRedis(&cfg.Redis)
+	queue := queue.NewWebHookQueue(rdb)
+	retry := retry.NewRetry(logger, queue, &cfg.App)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	w := worker.NewWebhookWorker(rdb, logger, &cfg.App, queue, retry)
+	w.WebhookWorker(ctx)
 }

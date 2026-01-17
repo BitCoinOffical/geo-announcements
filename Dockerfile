@@ -21,5 +21,6 @@ WORKDIR /app
 COPY --from=builder /app/bin/server .
 COPY --from=builder /app/bin/worker .
 COPY --from=builder /app/bin/app2 .
-
+COPY --from=builder /app/app-1/migrations ./migrations
+RUN ls -la /app/migrations
 CMD ["./server"]
